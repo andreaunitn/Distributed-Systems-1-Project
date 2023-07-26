@@ -17,6 +17,7 @@ public class Node extends AbstractActor {
     private boolean IsCrashed = false;
     private HashMap<Integer, String> storage;
     private Set<ActorRef> network;
+    private List<ActorRef> fingerTable;
 
     //TODO 1: add attribute for having information about the system
     //TODO 2: add structure to contain node data
@@ -26,6 +27,10 @@ public class Node extends AbstractActor {
         this.rnd = new Random();
         this.key = key;
         this.storage = new HashMap<>();
+        this.fingerTable = new ArrayList<>();
+        for(int i = 0; i<10; i++) {
+            this.fingerTable.add(ActorRef.noSender());
+        }
     }
 
     static public Props props(Integer key) {
@@ -35,6 +40,8 @@ public class Node extends AbstractActor {
     // TODO 4: To be adapted for our code
     public AbstractActor.Receive createReceive() {
         return receiveBuilder()
+                .match(Message.JoinNetworkOrder.class, this::OnJoinOrder)
+                .match(Message.JoinRequestMsg.class, this::OnJoinRequest)
                 .build();
     }
 
@@ -42,11 +49,19 @@ public class Node extends AbstractActor {
     //public int Get(Integer key) {}
     public void ForwardRequest() {}
 
-    public void Join(ActorRef bootstrapNode) {
-
-        //bootstrapNode.tell( , getSelf());
-
+    private void OnJoinOrder(Message.JoinNetworkOrder m) {
+        if (m != null) {
+            Message.JoinRequestMsg msg = new Message.JoinRequestMsg(key, getSelf());
+            m.bootstrapNode.tell(msg, getSelf());
+        }
     }
+
+    private void OnJoinRequest(Message.JoinRequestMsg m) {
+        network.add(m.sender);
+
+        //TODO
+    }
+
     public void Leave() {}
     public void Recovery() {}
 

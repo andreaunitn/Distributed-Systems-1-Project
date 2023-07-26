@@ -7,21 +7,20 @@ import java.io.Serializable;
 public class Message {
 
     //Main
-    public static class JoinNetwork implements Serializable {
-
+    public static class JoinNetworkOrder implements Serializable {
         public final ActorRef bootstrapNode;
-
-        public JoinNetwork(ActorRef node) {
+        public JoinNetworkOrder(ActorRef node) {
             this.bootstrapNode = node;
         }
-
     }
 
     //Nodes
     public static class JoinRequestMsg implements Serializable {
         public final Integer id;
-        public JoinRequestMsg(Integer key) {
+        public final ActorRef sender;
+        public JoinRequestMsg(Integer key, ActorRef node) {
             this.id = key;
+            this.sender = node;
         }
     }
 }
