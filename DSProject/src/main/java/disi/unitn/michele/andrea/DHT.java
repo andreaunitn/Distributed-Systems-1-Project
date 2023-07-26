@@ -7,7 +7,7 @@ import java.util.Map;
 
 public class DHT {
 
-    public static Map<Integer, ActorRef> HashTable = null;
+    public Map<Integer, ActorRef> HashTable = null;
 
     public DHT() {
         HashTable = new HashMap<>();

@@ -1,8 +1,9 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.ActorRef;
 import akka.actor.ActorSystem;
+import akka.actor.ActorRef;
 
+import disi.unitn.michele.andrea.Message;
 import disi.unitn.michele.andrea.Client;
 import disi.unitn.michele.andrea.Node;
 import disi.unitn.michele.andrea.DHT;
@@ -20,6 +21,7 @@ public class Main {
 
         DHT ring = new DHT();
         int client_id = 0;
+        final int MAX_NODES = 1024;
 
         Scanner in = new Scanner(System.in);
 
@@ -60,7 +62,7 @@ public class Main {
                     System.out.print("\t How many nodes to create? ");
                     int N_NODES = in.nextInt();
 
-                    while(N_NODES < 1) {
+                    while(N_NODES < 1 || N_NODES > 1024) {
                         System.out.print("\t How many nodes to create? ");
                         N_NODES = in.nextInt();
                     }
@@ -69,7 +71,7 @@ public class Main {
                         System.out.print("\t\t Key: ");
                         Integer k = in.nextInt();
 
-                        while(k < 0) {
+                        while(k < 0 || k > 1023) {
                             System.out.println("\t\t Wrong key");
                             System.out.print("\t\t Key: ");
                             k = in.nextInt();
