@@ -11,16 +11,10 @@ public class Client extends AbstractActor {
         return Props.create(Client.class, () -> new Client());
     }
 
-    // TODO 4: To be adapter for our code
+    // TODO 4: To be adapted for our code
     @Override
     public Receive createReceive() {
         return receiveBuilder()
-                .match(JoinGroupMsg.class,    this::onJoinGroupMsg)
-                .match(StartChatMsg.class,    this::onStartChatMsg)
-                .match(ChatMsg.class,         this::onChatMsg)
-                .match(PrintHistoryMsg.class, this::printHistory)
                 .build();
     }
-
-
 }

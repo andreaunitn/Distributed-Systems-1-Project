@@ -21,18 +21,14 @@ public class Node extends AbstractActor {
         return Props.create(Node.class, () -> new Node(key));
     }
 
-    // TODO 4: To be adapter for our code
-    @Override
-    public Receive createReceive() {
+    // TODO 4: To be adapted for our code
+    public AbstractActor.Receive createReceive() {
         return receiveBuilder()
-                .match(StartChatMsg.class,    this::onStartChatMsg)
-                .match(ChatMsg.class,         this::onChatMsg)
-                .match(PrintHistoryMsg.class, this::printHistory)
                 .build();
     }
 
     public void Update(Integer key, int value) {}
-    public int Get(Integer key) {}
+    //public int Get(Integer key) {}
     public void ForwardRequest() {}
 
     public void Join() {}
