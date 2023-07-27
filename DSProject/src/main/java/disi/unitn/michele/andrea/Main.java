@@ -3,13 +3,9 @@ package disi.unitn.michele.andrea;
 import akka.actor.ActorSystem;
 import akka.actor.ActorRef;
 
-import disi.unitn.michele.andrea.Message;
-import disi.unitn.michele.andrea.Client;
-import disi.unitn.michele.andrea.Node;
-import disi.unitn.michele.andrea.DHT;
-
 import java.util.ArrayList;
 import java.util.Scanner;
+import java.util.Random;
 import java.util.List;
 
 
@@ -50,11 +46,11 @@ public class Main {
                     }
 
                     for(int i = 0; i < N_CLIENTS; i++) {
-                        clients.add(system.actorOf(Client.props(), Integer.toString(client_id)));
+                        clients.add(system.actorOf(Client.props(), "Client" + client_id));
                         client_id++;
                     }
 
-                    System.out.println("\t Clients successfully created\n");
+                    System.out.println("\t Client-s successfully created\n");
 
                     break;
 
@@ -68,27 +64,48 @@ public class Main {
                     }
 
                     for(int i = 0; i < N_NODES; i++) {
-                        System.out.print("\t\t Key: ");
+                        System.out.print("\t\t Key (0-1023): ");
                         Integer k = in.nextInt();
 
                         while(k < 0 || k > 1023) {
                             System.out.println("\t\t Wrong key");
-                            System.out.print("\t\t Key: ");
+                            System.out.print("\t\t Key (0-1023): ");
                             k = in.nextInt();
                         }
 
                         while(ring.HashTable.containsKey(k)) {
                             System.out.println("\t\t The specified key already exists, please choose another one");
-                            System.out.print("\t\t Key: ");
+                            System.out.print("\t\t Key (0-1023): ");
                             k = in.nextInt();
                         }
 
-                        ring.HashTable.put(k, system.actorOf(Node.props(k), Integer.toString(k)));
+                        ActorRef node = system.actorOf(Node.props(k), "Node" + k);
+
+                        if(!ring.HashTable.isEmpty()) {
+
+                            Random generator = new Random();
+                            Object[] values = ring.AvailableNodes.toArray();
+                            ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
+
+                            // TODO: check if the selected bootstrapped node is available
+
+                            node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
+                        }
+
+                        ring.HashTable.put(k, node);
+                        ring.AvailableNodes.add(node);
                     }
+
+                    System.out.println("\t\t Node-s successfully created\n");
 
                     break;
 
                 case 3:
+                    System.out.println("Clients:");
+                    clients.forEach(client -> System.out.println("\t" + client.toString()));
+                    System.out.println();
+
+                    System.out.println("Nodes:");
                     ring.PrintNetwork();
                     break;
 

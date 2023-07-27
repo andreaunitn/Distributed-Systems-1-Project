@@ -5,14 +5,23 @@ plugins {
 group 'disi.unitn.michele.andrea'
 version '1.0-SNAPSHOT'
 
+def versions = [
+        ScalaBinary: "2.13"
+]
+
 repositories {
     mavenCentral()
 }
 
 dependencies {
+
     testImplementation 'org.junit.jupiter:junit-jupiter-api:5.8.1'
     testRuntimeOnly 'org.junit.jupiter:junit-jupiter-engine:5.8.1'
     implementation 'com.typesafe.akka:akka-actor-typed_2.13:2.8.3'
+    implementation "com.typesafe.akka:akka-slf4j_${versions.ScalaBinary}"
+    implementation platform("com.typesafe.akka:akka-bom_${versions.ScalaBinary}:2.8.3")
+    implementation "com.typesafe.akka:akka-actor_${versions.ScalaBinary}"
+    implementation "ch.qos.logback:logback-classic:1.2.12"
 }
 
 test {

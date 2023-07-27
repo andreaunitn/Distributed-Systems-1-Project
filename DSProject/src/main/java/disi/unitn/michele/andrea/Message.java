@@ -3,6 +3,8 @@ package disi.unitn.michele.andrea;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
+import java.util.Collections;
+import java.util.HashMap;
 
 public class Message {
 
@@ -23,4 +25,28 @@ public class Message {
             this.sender = node;
         }
     }
+
+    public static class JoinResponseMsg implements Serializable {
+        public final HashMap<Integer, ActorRef> network;
+        public final ActorRef sender;
+        public JoinResponseMsg(HashMap<Integer, ActorRef> network, ActorRef sender) {
+            this.network = (HashMap<Integer, ActorRef>) Collections.unmodifiableMap(network);
+            this.sender = sender;
+        }
+    }
+
+    public static class DataRequestMsg implements Serializable {
+        public final ActorRef sender;
+        public DataRequestMsg(ActorRef sender) {
+            this.sender = sender;
+        }
+    }
+
+    public static class DataResponseMsg implements Serializable {
+        public final HashMap<Integer, String> storage;
+        public DataResponseMsg(HashMap<Integer, String> storage) {
+            this.storage = (HashMap<Integer, String>) Collections.unmodifiableMap(storage);
+        }
+    }
+
 }
