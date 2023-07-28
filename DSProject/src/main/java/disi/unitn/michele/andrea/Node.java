@@ -112,7 +112,7 @@ public class Node extends AbstractActor {
             Integer k = entry.getKey();
             String v = entry.getValue();
 
-            if(((k <= this.key && k >= 0) || (k > m.key && k <= 1023)) && k != m.key) {
+            if(IsInInterval(this.key, m.key, k)) {
                 this.storage.put(k, v);
             }
         }
@@ -127,9 +127,7 @@ public class Node extends AbstractActor {
         HashSet<Integer> keySet = new HashSet(this.storage.keySet());
 
         for(Integer k : keySet) {
-            System.out.println("Key: " + k);
-            if((k <= m.key && k >= 0) || (k > this.key && k <= 1023)) {
-                System.out.println("Value: " + storage.get(k));
+            if(IsInInterval(m.key, this.key, k)) {
                 this.storage.remove(k);
             }
         }
@@ -186,16 +184,19 @@ public class Node extends AbstractActor {
         return i;
     }
 
-    private boolean IsInInterval(Integer myKey, Integer nextKey, Integer value) {
-        boolean result = false;
-
-        if(myKey < nextKey) {
-            if()
+    // Returns true if value should be saved in the new node
+    private boolean IsInInterval(Integer newNodeKey, Integer nextNodeKey, Integer value) {
+        if(newNodeKey > nextNodeKey) {
+            if(value <= newNodeKey && value > nextNodeKey) {
+                return true;
+            }
         } else {
-
+            if(value > nextNodeKey || value <= newNodeKey) {
+                return true;
+            }
         }
 
-        return result;
+        return false;
     }
 
     // TODO
