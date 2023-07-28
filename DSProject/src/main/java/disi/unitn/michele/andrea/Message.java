@@ -1,5 +1,6 @@
 package disi.unitn.michele.andrea;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
@@ -65,5 +66,24 @@ public class Message {
 
     public static class PrintClient implements Serializable {
         public PrintClient() {}
+    }
+
+    // Node + Client
+    public static class ReadRequestMsg implements Serializable {
+        public final ActorRef sender;
+        public final Integer key;
+        public ReadRequestMsg(ActorRef sender, Integer key) {
+            this.sender = sender;
+            this.key = key;
+        }
+    }
+
+    public static class ReadResponseMsg implements Serializable {
+        public final ActorRef recipient;
+        public final String value;
+        public ReadResponseMsg(ActorRef recipient, String value) {
+            this.recipient = recipient;
+            this.value = value;
+         }
     }
 }

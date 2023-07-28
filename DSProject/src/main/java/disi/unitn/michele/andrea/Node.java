@@ -29,7 +29,7 @@ public class Node extends AbstractActor {
         this.rnd = new Random();
         this.storage = new HashMap<>();
 
-
+        // TODO: remove when finished
         if(this.key == 2) {
             for (int i = 0; i < 5; i++) {
                 Integer number = rnd.nextInt(20);
@@ -61,7 +61,9 @@ public class Node extends AbstractActor {
                 .match(Message.DataRequestMsg.class, this::OnDataRequest)
                 .match(Message.DataResponseMsg.class, this::OnDataResponse)
                 .match(Message.PrintNode.class, this::OnPrintNode)
-                .match(Message.NodeAnnounceMsg.class, this::OnNodeAnnounceMsg)
+                .match(Message.NodeAnnounceMsg.class, this::OnNodeAnnounce)
+                .match(Message.ReadRequestMsg.class, this::OnReadRequest)
+                .match(Message.ReadResponseMsg.class, this::OnReadResponse)
                 .build();
     }
 
@@ -122,7 +124,7 @@ public class Node extends AbstractActor {
     }
 
     // Node that receives a multicast message
-    private void OnNodeAnnounceMsg(Message.NodeAnnounceMsg m) {
+    private void OnNodeAnnounce(Message.NodeAnnounceMsg m) {
         this.network.put(m.key, getSender());
         HashSet<Integer> keySet = new HashSet(this.storage.keySet());
 
@@ -131,6 +133,20 @@ public class Node extends AbstractActor {
                 this.storage.remove(k);
             }
         }
+    }
+
+    // Accepts read request
+    private void OnReadRequest(Message.ReadRequestMsg m) {
+        if(this.storage.containsKey(m.key)) {
+            getSender().tell(new Message.ReadResponseMsg(m.sender, storage.get(m.key)), getSelf());
+        } else {
+            ActorRef holdingNode = this.network.get(FindNeighbor(m.key));
+            holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
+        }
+    }
+
+    private void OnReadResponse(Message.ReadResponseMsg m) {
+        // TODO
     }
 
     // Print node storage
@@ -146,6 +162,11 @@ public class Node extends AbstractActor {
     //
     // Find the node with the next key
     private Integer FindNeighbor() {
+        return FindNeighbor(this.key);
+    }
+
+    // Find the node with key k
+    private Integer FindNeighbor(Integer k) {
         Integer neighborKey;
 
         Set<Integer> keySet = this.network.keySet();
@@ -153,7 +174,7 @@ public class Node extends AbstractActor {
         Collections.sort(keyList);
 
         for(int i = 0; i < keyList.size(); i++) {
-            if(keyList.get(i) > this.key) {
+            if(keyList.get(i) > k) {
                 neighborKey = keyList.get(i);
                 return neighborKey;
             }
