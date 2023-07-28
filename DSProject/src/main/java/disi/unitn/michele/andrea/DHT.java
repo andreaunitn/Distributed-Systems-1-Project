@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.TimeUnit;
 
 public class DHT {
 
@@ -18,7 +19,16 @@ public class DHT {
     }
 
     public void PrintNetwork() {
-        HashTable.forEach((key, value) -> System.out.println("\t" + key + " " + value));
-        System.out.println();
+
+        HashTable.forEach((key, value) -> {
+
+            try {
+                TimeUnit.MILLISECONDS.sleep(100);
+            } catch (InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+
+            value.tell(new Message.PrintNode(), ActorRef.noSender());
+        });
     }
 }

@@ -5,6 +5,7 @@ import akka.actor.ActorRef;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Map;
 
 public class Message {
 
@@ -27,10 +28,10 @@ public class Message {
     }
 
     public static class JoinResponseMsg implements Serializable {
-        public final HashMap<Integer, ActorRef> network;
+        public final Map<Integer, ActorRef> network;
         public final ActorRef sender;
         public JoinResponseMsg(HashMap<Integer, ActorRef> network, ActorRef sender) {
-            this.network = (HashMap<Integer, ActorRef>) Collections.unmodifiableMap(network);
+            this.network = Collections.unmodifiableMap(network);
             this.sender = sender;
         }
     }
@@ -43,10 +44,26 @@ public class Message {
     }
 
     public static class DataResponseMsg implements Serializable {
-        public final HashMap<Integer, String> storage;
-        public DataResponseMsg(HashMap<Integer, String> storage) {
-            this.storage = (HashMap<Integer, String>) Collections.unmodifiableMap(storage);
+        public final Map<Integer, String> storage;
+        public final Integer key;
+        public DataResponseMsg(HashMap<Integer, String> storage, Integer key) {
+            this.storage = Collections.unmodifiableMap(storage);
+            this.key = key;
         }
     }
 
+    public static class NodeAnnounceMsg implements Serializable {
+        public final Integer key;
+        public NodeAnnounceMsg(Integer key) {
+            this.key = key;
+        }
+    }
+
+    public static class PrintNode implements Serializable {
+        public PrintNode () {}
+    }
+
+    public static class PrintClient implements Serializable {
+        public PrintClient() {}
+    }
 }

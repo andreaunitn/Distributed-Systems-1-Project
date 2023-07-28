@@ -3,6 +3,7 @@ package disi.unitn.michele.andrea;
 import akka.actor.ActorSystem;
 import akka.actor.ActorRef;
 
+import java.util.concurrent.TimeUnit;
 import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Random;
@@ -10,7 +11,7 @@ import java.util.List;
 
 
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
         final ActorSystem system = ActorSystem.create("DHT");
         List<ActorRef> clients = new ArrayList<>();
@@ -46,7 +47,7 @@ public class Main {
                     }
 
                     for(int i = 0; i < N_CLIENTS; i++) {
-                        clients.add(system.actorOf(Client.props(), "Client" + client_id));
+                        clients.add(system.actorOf(Client.props(client_id), "Client" + client_id));
                         client_id++;
                     }
 
@@ -102,11 +103,23 @@ public class Main {
 
                 case 3:
                     System.out.println("Clients:");
-                    clients.forEach(client -> System.out.println("\t" + client.toString()));
+
+                    clients.forEach(client -> {
+                        client.tell(new Message.PrintClient(), ActorRef.noSender());
+
+                        try {
+                            TimeUnit.MILLISECONDS.sleep(100);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+
                     System.out.println();
 
                     System.out.println("Nodes:");
                     ring.PrintNetwork();
+
+                    TimeUnit.SECONDS.sleep(3);
                     break;
 
                 case 4:
