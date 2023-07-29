@@ -13,8 +13,9 @@ public class Node extends AbstractActor {
 
     private final Random rnd;
     private final Integer key;
-    private boolean IsCoordinator = false;
-    private boolean IsCrashed = false;
+    private boolean isCoordinator = false;
+    private boolean isCrashed = false;
+    private int valuesToCheck = 0;
 
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, String> storage;
@@ -115,12 +116,11 @@ public class Node extends AbstractActor {
             String v = entry.getValue();
 
             if(IsInInterval(this.key, m.key, k)) {
+                this.valuesToCheck++;
                 this.storage.put(k, v);
+                getSender().tell(new Message.ReadRequestMsg(getSelf(), k), getSelf());
             }
         }
-
-        // Multicast to every other nodes in the network
-        Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
     }
 
     // Node that receives a multicast message
@@ -138,7 +138,7 @@ public class Node extends AbstractActor {
     // Accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
         if(this.storage.containsKey(m.key)) {
-            getSender().tell(new Message.ReadResponseMsg(m.sender, storage.get(m.key)), getSelf());
+            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
         } else {
             ActorRef holdingNode = this.network.get(FindNeighbor(m.key));
             holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
@@ -146,7 +146,14 @@ public class Node extends AbstractActor {
     }
 
     private void OnReadResponse(Message.ReadResponseMsg m) {
-        // TODO
+        // Check data is OK
+        this.storage.put(m.key, m.value);
+        this.valuesToCheck--;
+
+        if(this.valuesToCheck == 0) {
+            // Multicast to every other nodes in the network
+            Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+        }
     }
 
     // Print node storage

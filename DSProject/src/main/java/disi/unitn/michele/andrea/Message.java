@@ -80,9 +80,11 @@ public class Message {
 
     public static class ReadResponseMsg implements Serializable {
         public final ActorRef recipient;
+        public final Integer key;
         public final String value;
-        public ReadResponseMsg(ActorRef recipient, String value) {
+        public ReadResponseMsg(ActorRef recipient, Integer key, String value) {
             this.recipient = recipient;
+            this.key = key;
             this.value = value;
          }
     }
