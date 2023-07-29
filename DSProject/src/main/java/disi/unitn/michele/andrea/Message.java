@@ -18,6 +18,10 @@ public class Message {
         }
     }
 
+    public static class LeaveNetworkOrder implements Serializable {
+        public LeaveNetworkOrder(){};
+    }
+
     //Nodes
     public static class JoinRequestMsg implements Serializable {
         public final Integer id;

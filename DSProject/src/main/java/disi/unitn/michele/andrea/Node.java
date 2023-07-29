@@ -65,6 +65,7 @@ public class Node extends AbstractActor {
                 .match(Message.NodeAnnounceMsg.class, this::OnNodeAnnounce)
                 .match(Message.ReadRequestMsg.class, this::OnReadRequest)
                 .match(Message.ReadResponseMsg.class, this::OnReadResponse)
+                .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
                 .build();
     }
 
@@ -154,6 +155,10 @@ public class Node extends AbstractActor {
             // Multicast to every other nodes in the network
             Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
         }
+    }
+
+    private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
+        //TODO
     }
 
     // Print node storage

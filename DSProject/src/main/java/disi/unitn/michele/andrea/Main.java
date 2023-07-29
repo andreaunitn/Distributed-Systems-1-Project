@@ -30,8 +30,9 @@ public class Main {
             System.out.println("Choose the operation you want to perform:");
             System.out.println("\t 1: Create clients;");
             System.out.println("\t 2: Create nodes;");
-            System.out.println("\t 3: Print network;");
-            System.out.println("\t 4: Exit;");
+            System.out.println("\t 3: Delete node;");
+            System.out.println("\t 4: Print network;");
+            System.out.println("\t 5: Exit;");
             System.out.print("Operation: ");
 
             int op = in.nextInt();
@@ -102,6 +103,21 @@ public class Main {
                     break;
 
                 case 3:
+                    System.out.print("\t Key: ");
+                    Integer k = in.nextInt();
+
+                    while(!ring.HashTable.containsKey(k)) {
+                        System.out.println("\t No node to delete with the specified key: ");
+                        System.out.print("\t Key: ");
+                        k = in.nextInt();
+                    }
+
+                    ActorRef node = ring.HashTable.get(k);
+                    node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
+
+                    break;
+
+                case 4:
                     System.out.println("Clients:");
 
                     clients.forEach(client -> {
@@ -122,7 +138,7 @@ public class Main {
                     TimeUnit.SECONDS.sleep(3);
                     break;
 
-                case 4:
+                case 5:
                     exit = true;
                     break;
 
