@@ -6,6 +6,7 @@ import akka.actor.ActorRef;
 import akka.event.Logging;
 import akka.actor.Props;
 
+import javax.xml.crypto.Data;
 import java.io.Serializable;
 import java.util.*;
 
@@ -18,7 +19,7 @@ public class Node extends AbstractActor {
     private int valuesToCheck = 0;
 
     private HashMap<Integer, ActorRef> network;
-    private HashMap<Integer, String> storage;
+    private HashMap<Integer, DataEntry> storage;
     private List<ActorRef> fingerTable;
 
     // Logger
@@ -34,7 +35,7 @@ public class Node extends AbstractActor {
         if(this.key == 2) {
             for (int i = 0; i < 5; i++) {
                 Integer number = rnd.nextInt(20);
-                this.storage.put(number, "ciao");
+                this.storage.put(number, new DataEntry("ciao"));
             }
         }
 
@@ -108,11 +109,11 @@ public class Node extends AbstractActor {
     // Node receives the data storage from the neighbor
     private void OnDataResponse(Message.DataResponseMsg m) {
         // Take only necessary data
-        Map<Integer, String> s = m.storage;
+        Map<Integer, DataEntry> s = m.storage;
 
-        for(Map.Entry<Integer, String> entry: s.entrySet()) {
+        for(Map.Entry<Integer, DataEntry> entry: s.entrySet()) {
             Integer k = entry.getKey();
-            String v = entry.getValue();
+            DataEntry v = entry.getValue();
 
             if(IsInInterval(this.key, m.key, k)) {
                 this.valuesToCheck++;
@@ -183,8 +184,8 @@ public class Node extends AbstractActor {
     // Print node storage
     private void OnPrintNode(Message.PrintNode m) {
         System.out.println("\t Node: " + this.key);
-        for(Map.Entry<Integer, String> entry: this.storage.entrySet()) {
-            System.out.println("\t\t" + " Key: " + entry.getKey() + " Value: " + entry.getValue());
+        for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
+            System.out.println("\t\t" + " Key: " + entry.getKey() + " Value: " + entry.getValue().GetValue() + " Version: " + entry.getValue().GetVersion());
         }
 
         System.out.println();
@@ -252,7 +253,6 @@ public class Node extends AbstractActor {
     }
 
     // TODO
-    public void Leave() {}
     public void Recovery() {}
     public void Update(Integer key, int value) {}
     public void Get() {}

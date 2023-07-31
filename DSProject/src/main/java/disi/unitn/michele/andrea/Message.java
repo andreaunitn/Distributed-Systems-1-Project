@@ -49,9 +49,9 @@ public class Message {
     }
 
     public static class DataResponseMsg implements Serializable {
-        public final Map<Integer, String> storage;
+        public final Map<Integer, DataEntry> storage;
         public final Integer key;
-        public DataResponseMsg(HashMap<Integer, String> storage, Integer key) {
+        public DataResponseMsg(HashMap<Integer, DataEntry> storage, Integer key) {
             this.storage = Collections.unmodifiableMap(storage);
             this.key = key;
         }
@@ -72,8 +72,8 @@ public class Message {
     }
 
     public static class PassDataItemsMsg implements Serializable {
-        public final Map<Integer, String> storage;
-        public PassDataItemsMsg(HashMap<Integer, String> storage) {
+        public final Map<Integer, DataEntry> storage;
+        public PassDataItemsMsg(HashMap<Integer, DataEntry> storage) {
             this.storage = Collections.unmodifiableMap(storage);
         }
     }
@@ -99,8 +99,8 @@ public class Message {
     public static class ReadResponseMsg implements Serializable {
         public final ActorRef recipient;
         public final Integer key;
-        public final String value;
-        public ReadResponseMsg(ActorRef recipient, Integer key, String value) {
+        public final DataEntry value;
+        public ReadResponseMsg(ActorRef recipient, Integer key, DataEntry value) {
             this.recipient = recipient;
             this.key = key;
             this.value = value;
