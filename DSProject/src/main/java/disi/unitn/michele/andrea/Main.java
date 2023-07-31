@@ -103,6 +103,12 @@ public class Main {
                     break;
 
                 case 3:
+                    if(ring.HashTable.size() == 0) {
+                        System.out.println("\t Cannot delete any node because the network is empty");
+                        System.out.println();
+                        break;
+                    }
+
                     System.out.print("\t Key: ");
                     Integer k = in.nextInt();
 
@@ -114,6 +120,11 @@ public class Main {
 
                     ActorRef node = ring.HashTable.get(k);
                     node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
+                    node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
+
+                    ring.HashTable.remove(k);
+
+                    System.out.println("\t\t Node successfully deleted\n");
 
                     break;
 

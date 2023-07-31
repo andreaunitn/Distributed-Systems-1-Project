@@ -64,6 +64,20 @@ public class Message {
         }
     }
 
+    public static class NodeLeaveMsg implements Serializable {
+        public final Integer key;
+        public NodeLeaveMsg(Integer key) {
+            this.key = key;
+        }
+    }
+
+    public static class PassDataItemsMsg implements Serializable {
+        public final Map<Integer, String> storage;
+        public PassDataItemsMsg(HashMap<Integer, String> storage) {
+            this.storage = Collections.unmodifiableMap(storage);
+        }
+    }
+
     public static class PrintNode implements Serializable {
         public PrintNode () {}
     }

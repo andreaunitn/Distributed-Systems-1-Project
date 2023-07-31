@@ -53,6 +53,7 @@ public class Node extends AbstractActor {
         return Props.create(Node.class, () -> new Node(key));
     }
 
+    // Dispatcher
     @Override
     public AbstractActor.Receive createReceive() {
         return receiveBuilder()
@@ -66,6 +67,8 @@ public class Node extends AbstractActor {
                 .match(Message.ReadRequestMsg.class, this::OnReadRequest)
                 .match(Message.ReadResponseMsg.class, this::OnReadResponse)
                 .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
+                .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
+                .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
                 .build();
     }
 
@@ -95,11 +98,6 @@ public class Node extends AbstractActor {
 
         // Contact neighbor and request data
         node.tell(new Message.DataRequestMsg(getSelf()), getSelf());
-
-        // Filter data based on the key
-        // Read operations
-        // Multicast
-        // Remove unnecessary data from other nodes
     }
 
     // Send storage to the new node
@@ -136,7 +134,7 @@ public class Node extends AbstractActor {
         }
     }
 
-    // Accepts read request
+    // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
@@ -146,6 +144,7 @@ public class Node extends AbstractActor {
         }
     }
 
+    // Node performs read operation
     private void OnReadResponse(Message.ReadResponseMsg m) {
         // Check data is OK
         this.storage.put(m.key, m.value);
@@ -157,8 +156,28 @@ public class Node extends AbstractActor {
         }
     }
 
+    // Node receives the command to leave the network
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
-        //TODO
+        // Multicast everyone
+        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+
+        // Get neighbor key
+        Integer neighborKey = FindNeighbor();
+        if(neighborKey != this.key) {
+            ActorRef node = this.network.get(neighborKey);
+
+            // Contact neighbor and pass data items
+            node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
+        }
+    }
+
+    private void OnPassDataItems(Message.PassDataItemsMsg m) {
+        this.storage.putAll(m.storage);
+    }
+
+    private void OnNodeLeave(Message.NodeLeaveMsg m) {
+        Integer k = m.key;
+        this.network.remove(k);
     }
 
     // Print node storage
