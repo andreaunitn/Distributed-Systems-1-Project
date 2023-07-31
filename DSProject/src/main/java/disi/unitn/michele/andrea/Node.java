@@ -70,6 +70,7 @@ public class Node extends AbstractActor {
                 .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
                 .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
+                .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .build();
     }
 
@@ -189,6 +190,22 @@ public class Node extends AbstractActor {
         }
 
         System.out.println();
+    }
+
+    private void OnWriteRequest(Message.WriteRequestMsg m) {
+        ActorRef node = this.network.get(m.key);
+        //TODO modify the readRequest or create new message type
+        /*
+        Alla fine anche oggi non ho scritto niente... ho passato la sera a cercare info
+        e a farmi domande sul da farsi ma non ho tutte le risposte.
+        Penso che dovremmo creare delle strutture dati per ricordare quali
+        richieste di read e write stiamo gestendo per i client (in qualità di
+        coordinatori) e penso creare una qualche distinzione fra le read per rispondere
+        ai client, e quelle per unirsi alla rete, dato che le callback avranno funzioni
+        differenti. Ho altri problemi in mente, legati al total ordering, ma te li spiego
+        domani a voce. Ciao.
+        */
+        //node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
     }
 
     //

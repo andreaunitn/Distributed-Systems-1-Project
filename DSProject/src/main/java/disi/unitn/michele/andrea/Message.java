@@ -106,4 +106,14 @@ public class Message {
             this.value = value;
          }
     }
+
+    // Client
+    public static class WriteRequestMsg implements Serializable {
+        public final Integer key;
+        public final String value;
+        public WriteRequestMsg(Integer key, String value) {
+            this.key = key;
+            this.value = value;
+        }
+    }
 }
