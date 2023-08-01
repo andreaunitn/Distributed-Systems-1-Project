@@ -21,7 +21,7 @@ public class Node extends AbstractActor {
 
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
-    private List<ActorRef> fingerTable;
+    private HashSet<Message.WriteRequestMsg> writeRequests;
 
     // Logger
     private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
@@ -40,14 +40,10 @@ public class Node extends AbstractActor {
             }
         }
 
-        this.fingerTable = new ArrayList<>();
-
         this.network = new HashMap<>();
         this.network.put(key, getSelf());
 
-        for(int i = 0; i < 10; i++) {
-            this.fingerTable.add(ActorRef.noSender());
-        }
+        this.writeRequests = new HashSet<>();
     }
 
     //
@@ -72,7 +68,7 @@ public class Node extends AbstractActor {
                 .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
                 .match(Message.ErrorMsg.class, this::OnError)
-                //.match(Message.WriteRequestMsg.class, this::OnWriteRequest)
+                .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .build();
     }
 
@@ -168,6 +164,8 @@ public class Node extends AbstractActor {
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
                 }
+            } else { // Node is reading before a write
+                //TODO
             }
         } else {
             m.recipient.tell(m, getSelf());
@@ -216,13 +214,18 @@ public class Node extends AbstractActor {
         System.out.println();
     }
 
-    /*
+    //
     private void OnWriteRequest(Message.WriteRequestMsg m) {
-        ActorRef node = this.network.get(m.key);
+
+        ActorRef node;
+        if(this.network.containsKey(m.key)) {
+            node = this.network.get(m.key);
+        } else {
+            node = this.network.get(FindNeighbor(m.key));
+        }
         //TODO modify the readRequest or create new message type
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
-    }*/
-
+    }
 
     // Find the node with the next key
     private Integer FindNeighbor() {
@@ -283,10 +286,4 @@ public class Node extends AbstractActor {
 
         return false;
     }
-
-    // TODO
-    public void Recovery() {}
-    public void Update(Integer key, int value) {}
-    public void Get() {}
-    public void ForwardRequest() {}
 }

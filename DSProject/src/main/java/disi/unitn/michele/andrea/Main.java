@@ -19,6 +19,7 @@ public class Main {
         final int MAX_NODES = 1024;
 
         Scanner in = new Scanner(System.in);
+        Random rand = new Random();
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
         System.out.println("Network Initialized");
@@ -147,10 +148,8 @@ public class Main {
                     System.out.print("\t\t Key: ");
                     Integer key = in.nextInt();
 
-                    Random rand = new Random();
                     List<Integer> keysAsArray = new ArrayList<>(ring.HashTable.keySet());
                     ActorRef n = ring.HashTable.get(keysAsArray.get(rand.nextInt(keysAsArray.size())));
-
                     ActorRef c = clients.get(ClientKey);
                     c.tell(new Message.GetRequestOrderMsg(n, key), ActorRef.noSender());
 
@@ -160,6 +159,35 @@ public class Main {
                     break;
 
                 case 5:
+                    if(clients.size() < 1) {
+                        System.out.println("\t Cannot perform update because there are no clients");
+                        System.out.println();
+                        break;
+                    }
+
+                    System.out.print("\t Select client: ");
+                    Integer Clientkey = in.nextInt();
+
+                    while(!clients.containsKey(Clientkey) ) {
+                        System.out.println("\t There is no client with the specified key");
+                        System.out.print("\t Select client: ");
+                        Clientkey = in.nextInt();
+                    }
+
+                    System.out.print("\t\t Key: ");
+                    Integer Key = in.nextInt();
+                    System.out.println();
+                    System.out.print("\t\t Value: ");
+                    String value = in.nextLine();
+
+                    List<Integer> keysArray = new ArrayList<>(ring.HashTable.keySet());
+                    ActorRef Node = ring.HashTable.get(keysArray.get(rand.nextInt(keysArray.size())));
+                    ActorRef Client = clients.get(Clientkey);
+                    Client.tell(new Message.UpdateRequestOrderMsg(Node, Key, value), ActorRef.noSender());
+
+                    TimeUnit.MILLISECONDS.sleep(500);
+                    System.out.println();
+
                     break;
 
                 case 6:

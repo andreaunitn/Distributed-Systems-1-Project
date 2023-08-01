@@ -2,6 +2,7 @@ package disi.unitn.michele.andrea;
 
 import akka.actor.Actor;
 import akka.actor.ActorRef;
+import scala.Int;
 
 import java.io.Serializable;
 import java.util.Collections;
@@ -119,6 +120,17 @@ public class Message {
         public GetRequestOrderMsg(ActorRef node, Integer key) {
             this.node = node;
             this.key = key;
+        }
+    }
+
+    public static class UpdateRequestOrderMsg implements Serializable {
+        public final ActorRef node;
+        public final Integer key;
+        public final String value;
+        public UpdateRequestOrderMsg(ActorRef node, Integer key, String value) {
+            this.node = node;
+            this.key = key;
+            this.value = value;
         }
     }
 
