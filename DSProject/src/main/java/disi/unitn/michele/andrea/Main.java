@@ -1,20 +1,18 @@
 package disi.unitn.michele.andrea;
 
+import akka.actor.Actor;
 import akka.actor.ActorSystem;
 import akka.actor.ActorRef;
 
+import java.util.*;
 import java.util.concurrent.TimeUnit;
-import java.util.ArrayList;
-import java.util.Scanner;
-import java.util.Random;
-import java.util.List;
 
 
 public class Main {
     public static void main(String[] args) throws InterruptedException {
 
         final ActorSystem system = ActorSystem.create("DHT");
-        List<ActorRef> clients = new ArrayList<>();
+        HashMap<Integer, ActorRef> clients = new HashMap<>();
 
         DHT ring = new DHT();
         int client_id = 0;
@@ -31,8 +29,10 @@ public class Main {
             System.out.println("\t 1: Create clients;");
             System.out.println("\t 2: Create nodes;");
             System.out.println("\t 3: Delete node;");
-            System.out.println("\t 4: Print network;");
-            System.out.println("\t 5: Exit;");
+            System.out.println("\t 4: Get;");
+            System.out.println("\t 5: Update;");
+            System.out.println("\t 6: Print network;");
+            System.out.println("\t 7: Exit;");
             System.out.print("Operation: ");
 
             int op = in.nextInt();
@@ -48,7 +48,7 @@ public class Main {
                     }
 
                     for(int i = 0; i < N_CLIENTS; i++) {
-                        clients.add(system.actorOf(Client.props(client_id), "Client" + client_id));
+                        clients.put(client_id, system.actorOf(Client.props(client_id), "Client" + client_id));
                         client_id++;
                     }
 
@@ -129,9 +129,43 @@ public class Main {
                     break;
 
                 case 4:
+                    if(clients.size() < 1 || ring.HashTable.size() == 0) {
+                        System.out.println("\t Cannot perform get because there are no clients or the network does not contain any node");
+                        System.out.println();
+                        break;
+                    }
+
+                    System.out.print("\t Select client: ");
+                    Integer ClientKey = in.nextInt();
+
+                    while(!clients.containsKey(ClientKey) ) {
+                        System.out.println("\t There is no client with the specified key");
+                        System.out.print("\t Select client: ");
+                        ClientKey = in.nextInt();
+                    }
+
+                    System.out.print("\t\t Key: ");
+                    Integer key = in.nextInt();
+
+                    Random rand = new Random();
+                    List<Integer> keysAsArray = new ArrayList<>(ring.HashTable.keySet());
+                    ActorRef n = ring.HashTable.get(keysAsArray.get(rand.nextInt(keysAsArray.size())));
+
+                    ActorRef c = clients.get(ClientKey);
+                    c.tell(new Message.GetRequestOrderMsg(n, key), ActorRef.noSender());
+
+                    TimeUnit.MILLISECONDS.sleep(500);
+                    System.out.println();
+
+                    break;
+
+                case 5:
+                    break;
+
+                case 6:
                     System.out.println("Clients:");
 
-                    clients.forEach(client -> {
+                    clients.forEach((i, client) -> {
                         client.tell(new Message.PrintClient(), ActorRef.noSender());
 
                         try {
@@ -149,7 +183,7 @@ public class Main {
                     TimeUnit.SECONDS.sleep(3);
                     break;
 
-                case 5:
+                case 7:
                     exit = true;
                     break;
 

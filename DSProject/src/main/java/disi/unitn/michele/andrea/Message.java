@@ -82,10 +82,6 @@ public class Message {
         public PrintNode () {}
     }
 
-    public static class PrintClient implements Serializable {
-        public PrintClient() {}
-    }
-
     // Node + Client
     public static class ReadRequestMsg implements Serializable {
         public final ActorRef sender;
@@ -114,6 +110,27 @@ public class Message {
         public WriteRequestMsg(Integer key, String value) {
             this.key = key;
             this.value = value;
+        }
+    }
+
+    public static class GetRequestOrderMsg implements Serializable {
+        public final ActorRef node;
+        public final Integer key;
+        public GetRequestOrderMsg(ActorRef node, Integer key) {
+            this.node = node;
+            this.key = key;
+        }
+    }
+
+    public static class PrintClient implements Serializable {
+        public PrintClient() {}
+    }
+
+    // Error handling
+    public static class ErrorMsg implements Serializable {
+        public final String msg;
+        public ErrorMsg(String msg) {
+            this.msg = msg;
         }
     }
 }

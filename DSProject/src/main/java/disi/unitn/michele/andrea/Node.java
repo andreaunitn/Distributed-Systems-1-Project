@@ -16,6 +16,7 @@ public class Node extends AbstractActor {
     private final Integer key;
     private boolean isCoordinator = false;
     private boolean isCrashed = false;
+    private boolean isJoining = false;
     private int valuesToCheck = 0;
 
     private HashMap<Integer, ActorRef> network;
@@ -70,13 +71,15 @@ public class Node extends AbstractActor {
                 .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
                 .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
-                .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
+                .match(Message.ErrorMsg.class, this::OnError)
+                //.match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .build();
     }
 
     // New node contacts bootstrapper
     private void OnJoinOrder(Message.JoinNetworkOrder m) {
         if (m != null) {
+            isJoining = true;
             Message.JoinRequestMsg msg = new Message.JoinRequestMsg(this.key, getSelf());
             m.bootstrapNode.tell(msg, getSelf());
         }
@@ -142,19 +145,32 @@ public class Node extends AbstractActor {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
         } else {
             ActorRef holdingNode = this.network.get(FindNeighbor(m.key));
-            holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
+            if(holdingNode == getSelf()) {
+                m.sender.tell(new Message.ErrorMsg("No node holds a value for key " + m.key), getSelf());
+            } else {
+                holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
+            }
         }
     }
 
     // Node performs read operation
     private void OnReadResponse(Message.ReadResponseMsg m) {
-        // Check data is OK
-        this.storage.put(m.key, m.value);
-        this.valuesToCheck--;
 
-        if(this.valuesToCheck == 0) {
-            // Multicast to every other nodes in the network
-            Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+        // Node is the recipient of the message
+        if(m.recipient == getSelf()) {
+            // Node is reading to join the network
+            if(isJoining) {
+                // Check data is OK
+                this.storage.put(m.key, m.value);
+                this.valuesToCheck--;
+
+                if(this.valuesToCheck == 0) {
+                    // Node is ready, Multicast to every other nodes in the network
+                    Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+                }
+            }
+        } else {
+            m.recipient.tell(m, getSelf());
         }
     }
 
@@ -173,13 +189,21 @@ public class Node extends AbstractActor {
         }
     }
 
+    // Node includes receiving items to its storage
     private void OnPassDataItems(Message.PassDataItemsMsg m) {
         this.storage.putAll(m.storage);
     }
 
+    // Removes the leaving node from the network
     private void OnNodeLeave(Message.NodeLeaveMsg m) {
         Integer k = m.key;
         this.network.remove(k);
+    }
+
+    // Print errors
+    private void OnError(Message.ErrorMsg m) {
+        System.err.println(m.msg);
+        System.err.println();
     }
 
     // Print node storage
@@ -192,23 +216,14 @@ public class Node extends AbstractActor {
         System.out.println();
     }
 
+    /*
     private void OnWriteRequest(Message.WriteRequestMsg m) {
         ActorRef node = this.network.get(m.key);
         //TODO modify the readRequest or create new message type
-        /*
-        Alla fine anche oggi non ho scritto niente... ho passato la sera a cercare info
-        e a farmi domande sul da farsi ma non ho tutte le risposte.
-        Penso che dovremmo creare delle strutture dati per ricordare quali
-        richieste di read e write stiamo gestendo per i client (in qualità di
-        coordinatori) e penso creare una qualche distinzione fra le read per rispondere
-        ai client, e quelle per unirsi alla rete, dato che le callback avranno funzioni
-        differenti. Ho altri problemi in mente, legati al total ordering, ma te li spiego
-        domani a voce. Ciao.
-        */
-        //node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
-    }
+        node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
+    }*/
 
-    //
+
     // Find the node with the next key
     private Integer FindNeighbor() {
         return FindNeighbor(this.key);
