@@ -1,6 +1,5 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.Actor;
 import akka.actor.ActorSystem;
 import akka.actor.ActorRef;
 
@@ -177,6 +176,9 @@ public class Main {
                     System.out.print("\t\t Key: ");
                     Integer Key = in.nextInt();
                     System.out.println();
+
+                    in.nextLine();
+
                     System.out.print("\t\t Value: ");
                     String value = in.nextLine();
 

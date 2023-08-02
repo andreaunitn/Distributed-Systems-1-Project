@@ -104,13 +104,43 @@ public class Message {
          }
     }
 
+    //TODO change name to message and relative functions
+    public static class ErrorNoValueFound implements Serializable {
+        public final ActorRef readSender;
+        public final Integer key;
+        public final DataEntry data;
+        public ErrorNoValueFound(ActorRef readSender, Integer key, DataEntry data) {
+            this.readSender = readSender;
+            this.key = key;
+            this.data = data;
+        }
+    }
+
     // Client
     public static class WriteRequestMsg implements Serializable {
+        public final ActorRef sender;
         public final Integer key;
         public final String value;
-        public WriteRequestMsg(Integer key, String value) {
+        public WriteRequestMsg(ActorRef sender, Integer key, String value) {
+            this.sender = sender;
             this.key = key;
             this.value = value;
+        }
+    }
+
+    public static class WriteResponseMsg implements Serializable {
+        public final String value;
+        public WriteResponseMsg(String value){
+            this.value = value;
+        }
+    }
+
+    public static class WriteContentMsg implements Serializable {
+        public final Integer key;
+        public final DataEntry data;
+        public WriteContentMsg(Integer key, DataEntry data) {
+            this.key = key;
+            this.data = data;
         }
     }
 

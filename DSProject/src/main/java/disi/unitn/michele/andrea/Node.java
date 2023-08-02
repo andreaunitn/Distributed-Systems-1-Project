@@ -1,12 +1,9 @@
 package disi.unitn.michele.andrea;
 
-import akka.event.LoggingAdapter;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
-import akka.event.Logging;
 import akka.actor.Props;
 
-import javax.xml.crypto.Data;
 import java.io.Serializable;
 import java.util.*;
 
@@ -22,9 +19,6 @@ public class Node extends AbstractActor {
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
     private HashSet<Message.WriteRequestMsg> writeRequests;
-
-    // Logger
-    private final LoggingAdapter log = Logging.getLogger(getContext().getSystem(), this);
 
     public Node(Integer key) {
         this.key = key;
@@ -69,6 +63,8 @@ public class Node extends AbstractActor {
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
                 .match(Message.ErrorMsg.class, this::OnError)
                 .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
+                .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
+                .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
                 .build();
     }
 
@@ -142,11 +138,41 @@ public class Node extends AbstractActor {
         } else {
             ActorRef holdingNode = this.network.get(FindNeighbor(m.key));
             if(holdingNode == getSelf()) {
-                m.sender.tell(new Message.ErrorMsg("No node holds a value for key " + m.key), getSelf());
+                m.sender.tell(new Message.ErrorNoValueFound(m.sender, m.key, null), getSelf());
             } else {
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
             }
         }
+    }
+
+    private void OnNoValueFound(Message.ErrorNoValueFound m) {
+
+        Message.WriteRequestMsg writeRequest = null;
+        for(Message.WriteRequestMsg w : this.writeRequests) {
+            if(w.key == m.key && getSelf() == m.readSender) {
+                writeRequest = w;
+                break;
+            }
+        }
+
+        if(writeRequest != null) {
+            DataEntry data;
+            if(m.data == null) {
+                data = new DataEntry(writeRequest.value);
+            } else {
+                data = m.data;
+                data.SetValue(writeRequest.value);
+            }
+            writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
+            getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
+            this.writeRequests.remove(writeRequest);
+        } else {
+            System.out.println("Ho mandato una richiesta di read per un valore che non c'è e non so perché");
+        }
+    }
+
+    private void OnWriteContentMsg(Message.WriteContentMsg m) {
+        InsertData(m.key, m.data);
     }
 
     // Node performs read operation
@@ -164,10 +190,14 @@ public class Node extends AbstractActor {
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
                 }
-            } else { // Node is reading before a write
-                //TODO
+            } else { // Node is reading to write
+                OnNoValueFound(new Message.ErrorNoValueFound(getSelf(), m.key, m.value));
+                //DataEntry data = m.value.SetValue();
+                //InsertData(m.key, m.value);
+                //TODO controlla che versione dato da inserire sia maggiore
             }
         } else {
+            // Forward request
             m.recipient.tell(m, getSelf());
         }
     }
@@ -204,17 +234,7 @@ public class Node extends AbstractActor {
         System.err.println();
     }
 
-    // Print node storage
-    private void OnPrintNode(Message.PrintNode m) {
-        System.out.println("\t Node: " + this.key);
-        for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
-            System.out.println("\t\t" + " Key: " + entry.getKey() + " Value: " + entry.getValue().GetValue() + " Version: " + entry.getValue().GetVersion());
-        }
-
-        System.out.println();
-    }
-
-    //
+    // Node receives a write request
     private void OnWriteRequest(Message.WriteRequestMsg m) {
 
         ActorRef node;
@@ -223,8 +243,18 @@ public class Node extends AbstractActor {
         } else {
             node = this.network.get(FindNeighbor(m.key));
         }
-        //TODO modify the readRequest or create new message type
+        this.writeRequests.add(m);
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
+    }
+
+    // Print node storage
+    private void OnPrintNode(Message.PrintNode m) {
+        System.out.println("\t Node: " + this.key);
+        for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
+            System.out.println("\t\t" + " Key: " + entry.getKey() + " Value: " + entry.getValue().GetValue() + " Version: " + entry.getValue().GetVersion());
+        }
+
+        System.out.println();
     }
 
     // Find the node with the next key
@@ -285,5 +315,17 @@ public class Node extends AbstractActor {
         }
 
         return false;
+    }
+
+    private void InsertData(Integer key, DataEntry value) {
+
+        // Check if a data item with this key is already in the storage
+        if(this.storage.containsKey(key)) {
+            if(this.storage.get(key).GetValue() != value.GetValue()) {
+                this.storage.get(key).SetValue(value.GetValue());
+            }
+        } else {
+            this.storage.put(key, new DataEntry(value.GetValue()));
+        }
     }
 }

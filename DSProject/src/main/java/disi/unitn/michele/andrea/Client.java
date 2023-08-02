@@ -24,6 +24,7 @@ public class Client extends AbstractActor {
                 .match(Message.ReadResponseMsg.class, this::OnReadResponse)
                 .match(Message.UpdateRequestOrderMsg.class, this::OnUpdateRequestOrder)
                 .match(Message.ErrorMsg.class, this::OnError)
+                .match(Message.WriteResponseMsg.class, this::OnWriteResponse)
                 .build();
     }
 
@@ -37,9 +38,14 @@ public class Client extends AbstractActor {
         System.out.println("\t\t Client " + this.key + " received value " + m.value.GetValue() + " for key " + m.key);
     }
 
+    // Receives a write response message from the coordinator
+    private void OnWriteResponse(Message.WriteResponseMsg m) {
+        System.out.println("\t\t Value " + m.value + " was written");
+    }
+
     // Client receives an update request from main
     private void OnUpdateRequestOrder(Message.UpdateRequestOrderMsg m) {
-        m.node.tell(new Message.WriteRequestMsg(m.key, m.value), getSelf());
+        m.node.tell(new Message.WriteRequestMsg(getSelf(), m.key, m.value), getSelf());
     }
 
     // Print errors
