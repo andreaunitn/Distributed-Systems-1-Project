@@ -23,6 +23,17 @@ public class Message {
         public LeaveNetworkOrder(){};
     }
 
+    public static class CrashRequestOrder implements Serializable {
+        public CrashRequestOrder(){}
+    }
+
+    public static class RecoveryRequestOrder implements Serializable {
+        public final ActorRef node;
+        public RecoveryRequestOrder(ActorRef node){
+            this.node = node;
+        }
+    }
+
     //Nodes
     public static class JoinRequestMsg implements Serializable {
         public final Integer id;

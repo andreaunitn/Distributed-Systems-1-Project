@@ -65,6 +65,7 @@ public class Node extends AbstractActor {
                 .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
                 .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
+                .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
                 .build();
     }
 
@@ -245,6 +246,10 @@ public class Node extends AbstractActor {
         }
         this.writeRequests.add(m);
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
+    }
+
+    private void OnCrashRequestOrder(Message.CrashRequestOrder m) {
+        //TODO
     }
 
     // Print node storage
