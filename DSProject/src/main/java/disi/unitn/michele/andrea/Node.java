@@ -48,6 +48,10 @@ public class Node extends AbstractActor {
     // Dispatcher
     @Override
     public AbstractActor.Receive createReceive() {
+        return onlineBehavior();
+    }
+
+    private AbstractActor.Receive onlineBehavior() {
         return receiveBuilder()
                 .match(Message.JoinNetworkOrder.class, this::OnJoinOrder)
                 .match(Message.JoinRequestMsg.class, this::OnJoinRequest)
@@ -65,7 +69,14 @@ public class Node extends AbstractActor {
                 .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
                 .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
-                .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
+                .match(Message.CrashRequestOrder.class, m -> {getContext().become(crashedBehavior()); isCrashed = true;})
+                .build();
+    }
+
+    private AbstractActor.Receive crashedBehavior() {
+        return receiveBuilder()
+                .match(Message.RecoveryRequestOrder.class, m -> {getContext().become(onlineBehavior()); isCrashed = false; OnRecoveryRequestOrder(m);})
+                .matchAny(m -> {})  // Ignore all other messages
                 .build();
     }
 
@@ -248,7 +259,7 @@ public class Node extends AbstractActor {
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
     }
 
-    private void OnCrashRequestOrder(Message.CrashRequestOrder m) {
+    private void OnRecoveryRequestOrder(Message.RecoveryRequestOrder m) {
         //TODO
     }
 
