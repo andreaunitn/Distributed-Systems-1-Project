@@ -31,9 +31,9 @@ public class Main {
             System.out.println("\t 3: Delete node;");
             System.out.println("\t 4: Get;");
             System.out.println("\t 5: Update;");
-            System.out.println("\t 6: Print network;");
-            System.out.println("\t 7: Crash node;");
-            System.out.println("\t 8: Recover node;");
+            System.out.println("\t 6: Crash node;");
+            System.out.println("\t 7: Recover node;");
+            System.out.println("\t 8: Print network;");
             System.out.println("\t 9: Exit;");
             System.out.print("Operation: ");
 
@@ -85,13 +85,11 @@ public class Main {
 
                         ActorRef node = system.actorOf(Node.props(k), "Node" + k);
 
-                        if(!ring.HashTable.isEmpty()) {
+                        if(!ring.AvailableNodes.isEmpty()) {
 
                             Random generator = new Random();
                             Object[] values = ring.AvailableNodes.toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
-
-                            // TODO: check if the selected bootstrapped node is available
 
                             node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
                         }
@@ -195,27 +193,6 @@ public class Main {
                     break;
 
                 case 6:
-                    System.out.println("Clients:");
-
-                    clients.forEach((i, client) -> {
-                        client.tell(new Message.PrintClient(), ActorRef.noSender());
-
-                        try {
-                            TimeUnit.MILLISECONDS.sleep(100);
-                        } catch (InterruptedException e) {
-                            throw new RuntimeException(e);
-                        }
-                    });
-
-                    System.out.println();
-
-                    System.out.println("Nodes:");
-                    ring.PrintNetwork();
-
-                    TimeUnit.SECONDS.sleep(3);
-                    break;
-
-                case 7:
 
                     if(ring.HashTable.size() == 0) {
                         System.out.println("\t Cannot make crash any node because the network is empty");
@@ -241,7 +218,7 @@ public class Main {
 
                     break;
 
-                case 8:
+                case 7:
 
                     if(ring.HashTable.size() == 0) {
                         System.out.println("\t Cannot recover any node because the network is empty");
@@ -259,13 +236,43 @@ public class Main {
                     }
 
                     ActorRef recoverNode = ring.HashTable.get(recoverKey);
-                    //TODO give the recovering node a reference (random, best one?)
-                    //recoverNode.tell(new Message.RecoveryRequestOrder(), ActorRef.noSender());
+                    ActorRef recoveryBoostrapNode = null;
+
+                    if(ring.AvailableNodes.size() > 0) {
+                        // Random node to be associated to the node that needs to recover
+                        Random generator = new Random();
+                        Object[] values = ring.AvailableNodes.toArray();
+                        recoveryBoostrapNode = (ActorRef) values[generator.nextInt(values.length)];
+
+                    }
+
+                    recoverNode.tell(new Message.RecoveryRequestOrder(recoveryBoostrapNode), ActorRef.noSender());
 
                     ring.AvailableNodes.add(recoverNode);
 
                     System.out.println("\t\t Recovery request sent\n");
 
+                    break;
+
+                case 8:
+                    System.out.println("Clients:");
+
+                    clients.forEach((i, client) -> {
+                        client.tell(new Message.PrintClient(), ActorRef.noSender());
+
+                        try {
+                            TimeUnit.MILLISECONDS.sleep(100);
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                    });
+
+                    System.out.println();
+
+                    System.out.println("Nodes:");
+                    ring.PrintNetwork();
+
+                    TimeUnit.SECONDS.sleep(3);
                     break;
 
                 case 9:

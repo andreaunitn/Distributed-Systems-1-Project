@@ -7,6 +7,7 @@ import scala.Int;
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
 
 public class Message {
@@ -124,6 +125,17 @@ public class Message {
             this.readSender = readSender;
             this.key = key;
             this.data = data;
+        }
+    }
+
+    public static class NetworkRequestMsg implements Serializable {
+        public NetworkRequestMsg() {}
+    }
+
+    public static class NetworkResponseMsg implements Serializable {
+        public final Map<Integer, ActorRef> network;
+        public NetworkResponseMsg(HashMap<Integer, ActorRef> network) {
+            this.network = Collections.unmodifiableMap(network);
         }
     }
 
