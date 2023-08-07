@@ -18,6 +18,7 @@ public class DHT {
         AvailableNodes = new HashSet<>();
     }
 
+    // Print all nodes of the network (also the crashed ones) with the corresponding content
     public void PrintNetwork() {
 
         HashTable.forEach((key, value) -> {

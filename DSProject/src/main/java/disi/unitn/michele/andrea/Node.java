@@ -40,7 +40,6 @@ public class Node extends AbstractActor {
         this.writeRequests = new HashSet<>();
     }
 
-    //
     static public Props props(Integer key) {
         return Props.create(Node.class, () -> new Node(key));
     }
@@ -75,6 +74,7 @@ public class Node extends AbstractActor {
                 .build();
     }
 
+    // Dispatcher for the crashed node
     private AbstractActor.Receive crashedBehavior() {
         return receiveBuilder()
                 .match(Message.RecoveryRequestOrder.class, this::OnRecoveryRequestOrder)
@@ -154,7 +154,7 @@ public class Node extends AbstractActor {
 
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
-        //TODO: put a timeout and print error if it ends
+        // TODO: put a timeout and print error if it ends
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
         } else {
@@ -167,6 +167,7 @@ public class Node extends AbstractActor {
         }
     }
 
+    // Node performs write operation
     private void OnNoValueFound(Message.ErrorNoValueFound m) {
 
         Message.WriteRequestMsg writeRequest = null;
@@ -179,20 +180,23 @@ public class Node extends AbstractActor {
 
         if(writeRequest != null) {
             DataEntry data;
+
             if(m.data == null) {
                 data = new DataEntry(writeRequest.value);
             } else {
                 data = m.data;
                 data.SetValue(writeRequest.value);
             }
+
             writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
             getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
             this.writeRequests.remove(writeRequest);
         } else {
-            System.out.println("Ho mandato una richiesta di read per un valore che non c'è e non so perché");
+            System.out.println("I've sent a read request for a non existing value and I don't know why");
         }
     }
 
+    // Put the received data in the storage
     private void OnWriteContentMsg(Message.WriteContentMsg m) {
         InsertData(m.key, m.data);
     }
@@ -269,11 +273,14 @@ public class Node extends AbstractActor {
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
     }
 
+    // Node receives the order to crash
     private void OnCrashRequestOrder(Message.CrashRequestOrder m) {
+        // Change dispatcher and set itself as crashed
         getContext().become(crashedBehavior());
         isCrashed = true;
     }
 
+    // Node receives the order to recovery from the crashed state
     private void OnRecoveryRequestOrder(Message.RecoveryRequestOrder m) {
 
         // Contact bootstrapper node for recovery
@@ -283,10 +290,12 @@ public class Node extends AbstractActor {
         isCrashed = false;
     }
 
+    // Tell node to begin recovery procedure
     private void OnNetworkRequestMsg(Message.NetworkRequestMsg m) {
         getSender().tell(new Message.NetworkResponseMsg(network), getSelf());
     }
 
+    // Node begins recovery protocol by asking other nodes the data items
     private void OnNetworkResponseMsg(Message.NetworkResponseMsg m) {
         isRecovering = true;
 
@@ -322,7 +331,7 @@ public class Node extends AbstractActor {
         System.out.println();
     }
 
-    // Find the node with the next key
+    // Wrapper
     private Integer FindNext() {
         return FindNext(this.key);
     }
@@ -347,10 +356,12 @@ public class Node extends AbstractActor {
         return neighborKey;
     }
 
+    // Wrapper
     private Integer FindPredecessor() {
         return FindPredecessor(this.key);
     }
 
+    // Find the predecessor node with key k
     private Integer FindPredecessor(Integer k) {
         Integer neighborKey;
 
@@ -404,6 +415,7 @@ public class Node extends AbstractActor {
         return false;
     }
 
+    // Put data in the storage
     private void InsertData(Integer key, DataEntry value) {
 
         // Check if a data item with this key is already in the storage

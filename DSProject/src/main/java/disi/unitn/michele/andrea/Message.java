@@ -1,18 +1,15 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.Actor;
 import akka.actor.ActorRef;
-import scala.Int;
 
 import java.io.Serializable;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 public class Message {
 
-    //Main
+    // Main
     public static class JoinNetworkOrder implements Serializable {
         public final ActorRef bootstrapNode;
         public JoinNetworkOrder(ActorRef node) {
@@ -21,7 +18,7 @@ public class Message {
     }
 
     public static class LeaveNetworkOrder implements Serializable {
-        public LeaveNetworkOrder(){};
+        public LeaveNetworkOrder(){}
     }
 
     public static class CrashRequestOrder implements Serializable {
@@ -35,7 +32,7 @@ public class Message {
         }
     }
 
-    //Nodes
+    // Node
     public static class JoinRequestMsg implements Serializable {
         public final Integer id;
         public final ActorRef sender;
@@ -116,7 +113,7 @@ public class Message {
          }
     }
 
-    //TODO change name to message and relative functions
+    // TODO change name to message and relative functions
     public static class ErrorNoValueFound implements Serializable {
         public final ActorRef readSender;
         public final Integer key;

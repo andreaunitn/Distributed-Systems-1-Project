@@ -6,7 +6,6 @@ import akka.actor.ActorRef;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-
 public class Main {
     public static void main(String[] args) throws InterruptedException {
 
@@ -39,6 +38,7 @@ public class Main {
 
             int op = in.nextInt();
 
+            // All possible cases
             switch(op) {
                 case 1:
                     System.out.print("\t How many clients to create? ");
@@ -54,7 +54,7 @@ public class Main {
                         client_id++;
                     }
 
-                    System.out.println("\t Client-s successfully created\n");
+                    System.out.println("\t Client successfully created\n");
 
                     break;
 
@@ -62,7 +62,7 @@ public class Main {
                     System.out.print("\t How many nodes to create? ");
                     int N_NODES = in.nextInt();
 
-                    while(N_NODES < 1 || N_NODES > 1024) {
+                    while(N_NODES < 1 || N_NODES > MAX_NODES) {
                         System.out.print("\t How many nodes to create? ");
                         N_NODES = in.nextInt();
                     }
@@ -71,7 +71,7 @@ public class Main {
                         System.out.print("\t\t Key (0-1023): ");
                         Integer k = in.nextInt();
 
-                        while(k < 0 || k > 1023) {
+                        while(k < 0 || k > (MAX_NODES - 1)) {
                             System.out.println("\t\t Wrong key");
                             System.out.print("\t\t Key (0-1023): ");
                             k = in.nextInt();
@@ -98,7 +98,7 @@ public class Main {
                         ring.AvailableNodes.add(node);
                     }
 
-                    System.out.println("\t\t Node-s successfully created\n");
+                    System.out.println("\t\t Node successfully created\n");
 
                     break;
 
@@ -123,14 +123,15 @@ public class Main {
                     node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
 
                     ring.HashTable.remove(k);
+                    ring.AvailableNodes.remove(k);
 
                     System.out.println("\t\t Node successfully deleted\n");
 
                     break;
 
                 case 4:
-                    if(clients.size() < 1 || ring.HashTable.size() == 0) {
-                        System.out.println("\t Cannot perform get because there are no clients or the network does not contain any node");
+                    if(clients.size() < 1 || ring.AvailableNodes.size() == 0) {
+                        System.out.println("\t Cannot perform get because there are no clients or the network does not contain any available node");
                         System.out.println();
                         break;
                     }
@@ -158,8 +159,8 @@ public class Main {
                     break;
 
                 case 5:
-                    if(clients.size() < 1) {
-                        System.out.println("\t Cannot perform update because there are no clients");
+                    if(clients.size() < 1 || ring.AvailableNodes.size() == 0) {
+                        System.out.println("\t Cannot perform update because there are no clients or the network does not contain any available node");
                         System.out.println();
                         break;
                     }
@@ -200,7 +201,7 @@ public class Main {
                         break;
                     }
 
-                    System.out.print("\t Node to make crash: ");
+                    System.out.print("\t Key: ");
                     Integer crashKey = in.nextInt();
 
                     while(!ring.HashTable.containsKey(crashKey) && !ring.AvailableNodes.contains(ring.HashTable.get(crashKey))) {
@@ -214,7 +215,7 @@ public class Main {
 
                     ring.AvailableNodes.remove(crashNode);
 
-                    System.out.println("\t\t Crash request sent\n");
+                    System.out.println("\t Crash request sent\n");
 
                     break;
 
@@ -226,19 +227,20 @@ public class Main {
                         break;
                     }
 
-                    System.out.print("\t Node to recover: ");
+                    System.out.print("\t Key: ");
                     Integer recoverKey = in.nextInt();
 
                     while(!ring.HashTable.containsKey(recoverKey) && ring.AvailableNodes.contains(ring.HashTable.get(recoverKey))) {
                         System.out.println("\t No node to recover with the specified key (might be already recovered)");
                         System.out.print("\t Key: ");
-                        crashKey = in.nextInt();
+                        recoverKey = in.nextInt();
                     }
 
                     ActorRef recoverNode = ring.HashTable.get(recoverKey);
                     ActorRef recoveryBoostrapNode = null;
 
                     if(ring.AvailableNodes.size() > 0) {
+
                         // Random node to be associated to the node that needs to recover
                         Random generator = new Random();
                         Object[] values = ring.AvailableNodes.toArray();
