@@ -113,18 +113,6 @@ public class Message {
          }
     }
 
-    // TODO change name to message and relative functions
-    public static class ErrorNoValueFound implements Serializable {
-        public final ActorRef readSender;
-        public final Integer key;
-        public final DataEntry data;
-        public ErrorNoValueFound(ActorRef readSender, Integer key, DataEntry data) {
-            this.readSender = readSender;
-            this.key = key;
-            this.data = data;
-        }
-    }
-
     public static class NetworkRequestMsg implements Serializable {
         public NetworkRequestMsg() {}
     }
@@ -189,10 +177,24 @@ public class Message {
     }
 
     // Error handling
+
     public static class ErrorMsg implements Serializable {
         public final String msg;
         public ErrorMsg(String msg) {
             this.msg = msg;
+        }
+    }
+
+    // TODO change name to message and relative functions
+    public static class ErrorNoValueFound extends ErrorMsg implements Serializable {
+        public final ActorRef readSender;
+        public final DataEntry data;
+        public final Integer key;
+        public ErrorNoValueFound(String msg, ActorRef readSender, Integer key, DataEntry data) {
+            super(msg);
+            this.readSender = readSender;
+            this.data = data;
+            this.key = key;
         }
     }
 }

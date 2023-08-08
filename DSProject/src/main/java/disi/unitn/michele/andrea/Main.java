@@ -88,7 +88,7 @@ public class Main {
                         if(!ring.AvailableNodes.isEmpty()) {
 
                             Random generator = new Random();
-                            Object[] values = ring.AvailableNodes.toArray();
+                            Object[] values = ring.HashTable.values().toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
 
                             node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
@@ -120,6 +120,8 @@ public class Main {
 
                     ActorRef node = ring.HashTable.get(k);
                     node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
+
+                    // Tell sender node to terminate
                     node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
 
                     ring.HashTable.remove(k);
@@ -195,8 +197,8 @@ public class Main {
 
                 case 6:
 
-                    if(ring.HashTable.size() == 0) {
-                        System.out.println("\t Cannot make crash any node because the network is empty");
+                    if(ring.HashTable.size() == 0 || ring.AvailableNodes.isEmpty()) {
+                        System.out.println("\t Cannot make crash any node because there are no nodes available");
                         System.out.println();
                         break;
                     }
@@ -204,10 +206,10 @@ public class Main {
                     System.out.print("\t Key: ");
                     Integer crashKey = in.nextInt();
 
-                    while(!ring.HashTable.containsKey(crashKey) && !ring.AvailableNodes.contains(ring.HashTable.get(crashKey))) {
+                    if(!ring.HashTable.containsKey(crashKey) || !ring.AvailableNodes.contains(ring.HashTable.get(crashKey))) {
                         System.out.println("\t No node to make crash with the specified key (might be already in crashed state)");
-                        System.out.print("\t Key: ");
-                        crashKey = in.nextInt();
+                        System.out.println();
+                        break;
                     }
 
                     ActorRef crashNode = ring.HashTable.get(crashKey);
@@ -215,14 +217,14 @@ public class Main {
 
                     ring.AvailableNodes.remove(crashNode);
 
-                    System.out.println("\t Crash request sent\n");
+                    System.out.println("\t\t Crash request sent\n");
 
                     break;
 
                 case 7:
 
-                    if(ring.HashTable.size() == 0) {
-                        System.out.println("\t Cannot recover any node because the network is empty");
+                    if(ring.HashTable.size() == 0 || ring.AvailableNodes.size() == ring.HashTable.size()) {
+                        System.out.println("\t Cannot recover any node because no node is crashed");
                         System.out.println();
                         break;
                     }
@@ -230,10 +232,10 @@ public class Main {
                     System.out.print("\t Key: ");
                     Integer recoverKey = in.nextInt();
 
-                    while(!ring.HashTable.containsKey(recoverKey) && ring.AvailableNodes.contains(ring.HashTable.get(recoverKey))) {
+                    if(!ring.HashTable.containsKey(recoverKey) || ring.AvailableNodes.contains(ring.HashTable.get(recoverKey))) {
                         System.out.println("\t No node to recover with the specified key (might be already recovered)");
-                        System.out.print("\t Key: ");
-                        recoverKey = in.nextInt();
+                        System.out.println();
+                        break;
                     }
 
                     ActorRef recoverNode = ring.HashTable.get(recoverKey);

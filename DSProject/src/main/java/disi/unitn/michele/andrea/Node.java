@@ -64,13 +64,13 @@ public class Node extends AbstractActor {
                 .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
                 .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
-                .match(Message.ErrorMsg.class, this::OnError)
                 .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
                 .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
                 .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
                 .match(Message.NetworkRequestMsg.class, this::OnNetworkRequestMsg)
                 .match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
+                .match(Message.ErrorMsg.class, this::OnError)
                 .build();
     }
 
@@ -135,6 +135,10 @@ public class Node extends AbstractActor {
             }
         }
 
+        if(this.valuesToCheck == 0) {
+            Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+        }
+
         if(isRecovering) {
             isRecovering = false;
         }
@@ -158,9 +162,9 @@ public class Node extends AbstractActor {
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
         } else {
-            ActorRef holdingNode = this.network.get(FindNext(m.key));
+            ActorRef holdingNode = this.network.get(FindResposible(m.key));
             if(holdingNode == getSelf()) {
-                m.sender.tell(new Message.ErrorNoValueFound(m.sender, m.key, null), getSelf());
+                m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null), getSelf());
             } else {
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
             }
@@ -214,10 +218,10 @@ public class Node extends AbstractActor {
 
                 if(this.valuesToCheck == 0) {
                     // Node is ready, Multicast to every other nodes in the network
-                    Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+                    Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                 }
             } else { // Node is reading to write
-                OnNoValueFound(new Message.ErrorNoValueFound(getSelf(), m.key, m.value));
+                OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
                 //DataEntry data = m.value.SetValue();
                 //InsertData(m.key, m.value);
                 //TODO controlla che versione dato da inserire sia maggiore
@@ -231,7 +235,7 @@ public class Node extends AbstractActor {
     // Node receives the command to leave the network
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
         // Multicast everyone
-        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<ActorRef>(this.network.values()));
+        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
 
         // Get neighbor key
         Integer neighborKey = FindNext();
@@ -263,12 +267,7 @@ public class Node extends AbstractActor {
     // Node receives a write request
     private void OnWriteRequest(Message.WriteRequestMsg m) {
         //TODO: put a timeout and print error if it ends
-        ActorRef node;
-        if(this.network.containsKey(m.key)) {
-            node = this.network.get(m.key);
-        } else {
-            node = this.network.get(FindNext(m.key));
-        }
+        ActorRef node = this.network.get(FindResposible(m.key));
         this.writeRequests.add(m);
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
     }
@@ -282,9 +281,10 @@ public class Node extends AbstractActor {
 
     // Node receives the order to recovery from the crashed state
     private void OnRecoveryRequestOrder(Message.RecoveryRequestOrder m) {
-
-        // Contact bootstrapper node for recovery
-        m.node.tell(new Message.NetworkRequestMsg(), getSelf());
+        if(m.node != null) {
+            // Contact bootstrapper node for recovery
+            m.node.tell(new Message.NetworkRequestMsg(), getSelf());
+        }
 
         getContext().become(onlineBehavior());
         isCrashed = false;
@@ -292,7 +292,7 @@ public class Node extends AbstractActor {
 
     // Tell node to begin recovery procedure
     private void OnNetworkRequestMsg(Message.NetworkRequestMsg m) {
-        getSender().tell(new Message.NetworkResponseMsg(network), getSelf());
+        getSender().tell(new Message.NetworkResponseMsg(this.network), getSelf());
     }
 
     // Node begins recovery protocol by asking other nodes the data items
@@ -336,7 +336,7 @@ public class Node extends AbstractActor {
         return FindNext(this.key);
     }
 
-    // Find the node with key k
+    // Find the node for key k
     private Integer FindNext(Integer k) {
         Integer neighborKey;
 
@@ -354,6 +354,15 @@ public class Node extends AbstractActor {
         // No bigger key found, take the first (circular ring)
         neighborKey = keyList.get(0);
         return neighborKey;
+    }
+
+    // Find the node responsible for key k
+    private Integer FindResposible(Integer k) {
+        if(this.network.containsKey(k)) {
+            return k;
+        } else {
+            return FindNext(k);
+        }
     }
 
     // Wrapper
