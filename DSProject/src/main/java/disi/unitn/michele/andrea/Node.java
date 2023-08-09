@@ -1,11 +1,13 @@
 package disi.unitn.michele.andrea;
 
+import scala.concurrent.duration.Duration;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
 import akka.actor.Props;
 
 import java.io.Serializable;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 public class Node extends AbstractActor {
 
@@ -22,21 +24,10 @@ public class Node extends AbstractActor {
 
     public Node(Integer key) {
         this.key = key;
-
         this.rnd = new Random();
         this.storage = new HashMap<>();
-
-        // TODO: remove when finished
-        if(this.key == 2) {
-            for (int i = 0; i < 5; i++) {
-                Integer number = rnd.nextInt(20);
-                this.storage.put(number, new DataEntry("ciao"));
-            }
-        }
-
         this.network = new HashMap<>();
         this.network.put(key, getSelf());
-
         this.writeRequests = new HashSet<>();
     }
 
@@ -71,6 +62,7 @@ public class Node extends AbstractActor {
                 .match(Message.NetworkRequestMsg.class, this::OnNetworkRequestMsg)
                 .match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
                 .match(Message.ErrorMsg.class, this::OnError)
+                .match(Message.TimeoutMsg.class, this::OnTimeOut)
                 .build();
     }
 
@@ -162,7 +154,7 @@ public class Node extends AbstractActor {
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
         } else {
-            ActorRef holdingNode = this.network.get(FindResposible(m.key));
+            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
             if(holdingNode == getSelf()) {
                 m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null), getSelf());
             } else {
@@ -267,8 +259,17 @@ public class Node extends AbstractActor {
     // Node receives a write request
     private void OnWriteRequest(Message.WriteRequestMsg m) {
         //TODO: put a timeout and print error if it ends
-        ActorRef node = this.network.get(FindResposible(m.key));
+        ActorRef node = this.network.get(FindResponsible(m.key));
         this.writeRequests.add(m);
+
+        // Timeout for the write request
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                getSelf(),                                                       // destination actor reference
+                new Message.TimeoutMsg(m.sender, m.key, "Write time-out"),       // the message to send
+                getContext().system().dispatcher(),                              // system dispatcher
+                getSelf()                                                        // source of the message (myself)
+        );
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
     }
 
@@ -331,6 +332,23 @@ public class Node extends AbstractActor {
         System.out.println();
     }
 
+    // Node timeout
+    private void OnTimeOut(Message.TimeoutMsg m) {
+
+        Message.WriteRequestMsg writeRequest = null;
+        for(Message.WriteRequestMsg w : this.writeRequests) {
+            if(w.key == m.key && w.sender == m.recipient) {
+                writeRequest = w;
+                break;
+            }
+        }
+
+        if(writeRequest != null) {
+            m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
+            this.writeRequests.remove(writeRequest);
+        }
+    }
+
     // Wrapper
     private Integer FindNext() {
         return FindNext(this.key);
@@ -357,7 +375,7 @@ public class Node extends AbstractActor {
     }
 
     // Find the node responsible for key k
-    private Integer FindResposible(Integer k) {
+    private Integer FindResponsible(Integer k) {
         if(this.network.containsKey(k)) {
             return k;
         } else {

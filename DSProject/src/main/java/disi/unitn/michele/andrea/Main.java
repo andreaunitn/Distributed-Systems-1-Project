@@ -185,8 +185,9 @@ public class Main {
                     System.out.print("\t\t Value: ");
                     String value = in.nextLine();
 
-                    List<Integer> keysArray = new ArrayList<>(ring.HashTable.keySet());
-                    ActorRef Node = ring.HashTable.get(keysArray.get(rand.nextInt(keysArray.size())));
+                    //List<Integer> keysArray = new ArrayList<>(ring.HashTable.keySet());
+                    List<ActorRef> keysArray = new ArrayList<>(ring.AvailableNodes);
+                    ActorRef Node = keysArray.get(rand.nextInt(keysArray.size()));
                     ActorRef Client = clients.get(Clientkey);
                     Client.tell(new Message.UpdateRequestOrderMsg(Node, Key, value), ActorRef.noSender());
 

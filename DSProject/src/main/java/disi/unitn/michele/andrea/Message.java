@@ -177,7 +177,6 @@ public class Message {
     }
 
     // Error handling
-
     public static class ErrorMsg implements Serializable {
         public final String msg;
         public ErrorMsg(String msg) {
@@ -185,7 +184,6 @@ public class Message {
         }
     }
 
-    // TODO change name to message and relative functions
     public static class ErrorNoValueFound extends ErrorMsg implements Serializable {
         public final ActorRef readSender;
         public final DataEntry data;
@@ -195,6 +193,18 @@ public class Message {
             this.readSender = readSender;
             this.data = data;
             this.key = key;
+        }
+    }
+
+    // Timeout
+    public static class TimeoutMsg implements Serializable {
+        public final ActorRef recipient;
+        public final Integer key;
+        public final String msg;
+        public TimeoutMsg(ActorRef recipient, Integer key, String msg) {
+            this.recipient = recipient;
+            this.key = key;
+            this.msg = msg;
         }
     }
 }
