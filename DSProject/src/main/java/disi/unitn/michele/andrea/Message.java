@@ -3,7 +3,10 @@ package disi.unitn.michele.andrea;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
+import java.text.DateFormat;
+import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -96,9 +99,12 @@ public class Message {
     public static class ReadRequestMsg implements Serializable {
         public final ActorRef sender;
         public final Integer key;
-        public ReadRequestMsg(ActorRef sender, Integer key) {
+        public final int message_id;
+
+        public ReadRequestMsg(ActorRef sender, Integer key, int message_id) {
             this.sender = sender;
             this.key = key;
+            this.message_id = message_id;
         }
     }
 
@@ -106,10 +112,12 @@ public class Message {
         public final ActorRef recipient;
         public final Integer key;
         public final DataEntry value;
-        public ReadResponseMsg(ActorRef recipient, Integer key, DataEntry value) {
+        public final int message_id;
+        public ReadResponseMsg(ActorRef recipient, Integer key, DataEntry value, int message_id) {
             this.recipient = recipient;
             this.key = key;
             this.value = value;
+            this.message_id = message_id;
          }
     }
 
@@ -129,10 +137,18 @@ public class Message {
         public final ActorRef sender;
         public final Integer key;
         public final String value;
+
+        public int message_id;
+
         public WriteRequestMsg(ActorRef sender, Integer key, String value) {
             this.sender = sender;
             this.key = key;
             this.value = value;
+
+            // Generate hash to distinguish requests
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            Date date = new Date();
+            message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
     }
 
@@ -201,10 +217,13 @@ public class Message {
         public final ActorRef recipient;
         public final Integer key;
         public final String msg;
-        public TimeoutMsg(ActorRef recipient, Integer key, String msg) {
+        public final int message_id;
+
+        public TimeoutMsg(ActorRef recipient, Integer key, String msg, int message_id) {
             this.recipient = recipient;
             this.key = key;
             this.msg = msg;
+            this.message_id = message_id;
         }
     }
 }

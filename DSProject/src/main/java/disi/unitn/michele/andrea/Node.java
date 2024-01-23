@@ -122,7 +122,7 @@ public class Node extends AbstractActor {
                 this.valuesToCheck++;
                 this.storage.put(k, v);
                 if(!isRecovering) {
-                    getSender().tell(new Message.ReadRequestMsg(getSelf(), k), getSelf());
+                    getSender().tell(new Message.ReadRequestMsg(getSelf(), k, 0), getSelf());
                 }
             }
         }
@@ -152,13 +152,13 @@ public class Node extends AbstractActor {
     private void OnReadRequest(Message.ReadRequestMsg m) {
         // TODO: put a timeout and print error if it ends
         if(this.storage.containsKey(m.key)) {
-            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key)), getSelf());
+            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
         } else {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key));
             if(holdingNode == getSelf()) {
                 m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null), getSelf());
             } else {
-                holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key), getSelf());
+                holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
             }
         }
     }
@@ -181,7 +181,7 @@ public class Node extends AbstractActor {
                 data = new DataEntry(writeRequest.value);
             } else {
                 data = m.data;
-                data.SetValue(writeRequest.value);
+                data.SetValue(writeRequest.value, false);
             }
 
             writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
@@ -213,7 +213,26 @@ public class Node extends AbstractActor {
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                 }
             } else { // Node is reading to write
-                OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
+
+                Message.WriteRequestMsg writeRequest = null;
+                for(Message.WriteRequestMsg w : this.writeRequests) {
+                    //System.out.println("w.key: " + w.key + "; w.sender: " + w.sender + "; m.key: " + m.key + "; m.recipient: " + m.recipient);
+                    System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+                    if(w.message_id == m.message_id) {
+                        writeRequest = w;
+                        break;
+                    }
+                }
+
+                if(writeRequest != null) {
+                    System.out.println("Fatto! Guarda... la porta si è chiusa");
+                    m.value.SetValue(writeRequest.value, true);
+                    getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
+                    writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
+                    this.writeRequests.remove(writeRequest);
+                }
+
+                //OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
                 //DataEntry data = m.value.SetValue();
                 //InsertData(m.key, m.value);
                 //TODO controlla che versione dato da inserire sia maggiore
@@ -261,16 +280,15 @@ public class Node extends AbstractActor {
         //TODO: put a timeout and print error if it ends
         ActorRef node = this.network.get(FindResponsible(m.key));
         this.writeRequests.add(m);
-
         // Timeout for the write request
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
                 getSelf(),                                                       // destination actor reference
-                new Message.TimeoutMsg(m.sender, m.key, "Write time-out"),       // the message to send
+                new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id),       // the message to send
                 getContext().system().dispatcher(),                              // system dispatcher
                 getSelf()                                                        // source of the message (myself)
         );
-        node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
+        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, m.message_id), getSelf());
     }
 
     // Node receives the order to crash
@@ -337,7 +355,8 @@ public class Node extends AbstractActor {
 
         Message.WriteRequestMsg writeRequest = null;
         for(Message.WriteRequestMsg w : this.writeRequests) {
-            if(w.key == m.key && w.sender == m.recipient) {
+            System.out.println("PIRLAA w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+            if(w.message_id == m.message_id) {
                 writeRequest = w;
                 break;
             }
@@ -448,7 +467,7 @@ public class Node extends AbstractActor {
         // Check if a data item with this key is already in the storage
         if(this.storage.containsKey(key)) {
             if(this.storage.get(key).GetValue() != value.GetValue()) {
-                this.storage.get(key).SetValue(value.GetValue());
+                this.storage.get(key).SetValue(value.GetValue(), false);
             }
         } else {
             this.storage.put(key, new DataEntry(value.GetValue()));

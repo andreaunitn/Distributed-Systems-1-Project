@@ -30,7 +30,7 @@ public class Client extends AbstractActor {
 
     // Client receives a get request from main
     private void OnGetRequestOrder(Message.GetRequestOrderMsg m) {
-        m.node.tell(new Message.ReadRequestMsg(getSelf(), m.key), getSelf());
+        m.node.tell(new Message.ReadRequestMsg(getSelf(), m.key, 1), getSelf());
     }
 
     // When receives the response for a read print data item
@@ -45,6 +45,7 @@ public class Client extends AbstractActor {
 
     // Client receives an update request from main
     private void OnUpdateRequestOrder(Message.UpdateRequestOrderMsg m) {
+
         m.node.tell(new Message.WriteRequestMsg(getSelf(), m.key, m.value), getSelf());
     }
 

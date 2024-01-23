@@ -21,9 +21,11 @@ public class DataEntry {
     }
 
     // Set value and version
-    public void SetValue(String value) {
+    public void SetValue(String value, boolean update) {
         this.value = value;
-        this.version++;
+        if(update) {
+            this.version++;
+        }
     }
 
     // Check if the input data is outdated
