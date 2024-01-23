@@ -187,6 +187,7 @@ public class Node extends AbstractActor {
             writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
             getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
             this.writeRequests.remove(writeRequest);
+            System.out.println(getSelf() + "Removed in OnNoValueFound");
         } else {
             System.out.println("I've sent a read request for a non existing value and I don't know why");
         }
@@ -200,6 +201,7 @@ public class Node extends AbstractActor {
     // Node performs read operation
     private void OnReadResponse(Message.ReadResponseMsg m) {
 
+        //System.out.println("Node: " + getSelf() + " ReadResponse: " + m.recipient + " " + m.key + " " + m.value + " " + m.message_id);
         // Node is the recipient of the message
         if(m.recipient == getSelf()) {
             // Node is reading to join the network
@@ -211,13 +213,15 @@ public class Node extends AbstractActor {
                 if(this.valuesToCheck == 0) {
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+                    isJoining = false;
                 }
             } else { // Node is reading to write
 
                 Message.WriteRequestMsg writeRequest = null;
+                //System.out.println("is writeRequests Empty: " + writeRequests.isEmpty());
                 for(Message.WriteRequestMsg w : this.writeRequests) {
                     //System.out.println("w.key: " + w.key + "; w.sender: " + w.sender + "; m.key: " + m.key + "; m.recipient: " + m.recipient);
-                    System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+                    //System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
                     if(w.message_id == m.message_id) {
                         writeRequest = w;
                         break;
@@ -230,6 +234,7 @@ public class Node extends AbstractActor {
                     getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
                     writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
                     this.writeRequests.remove(writeRequest);
+                    System.out.println(getSelf() + "Removed in OnReadResponse");
                 }
 
                 //OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
@@ -280,6 +285,7 @@ public class Node extends AbstractActor {
         //TODO: put a timeout and print error if it ends
         ActorRef node = this.network.get(FindResponsible(m.key));
         this.writeRequests.add(m);
+        //System.out.println("Node " + getSelf() + " added this to writeRequests: " + m.message_id);
         // Timeout for the write request
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
@@ -355,7 +361,7 @@ public class Node extends AbstractActor {
 
         Message.WriteRequestMsg writeRequest = null;
         for(Message.WriteRequestMsg w : this.writeRequests) {
-            System.out.println("PIRLAA w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+            //System.out.println("PIRLAA w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
             if(w.message_id == m.message_id) {
                 writeRequest = w;
                 break;
@@ -365,6 +371,7 @@ public class Node extends AbstractActor {
         if(writeRequest != null) {
             m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
             this.writeRequests.remove(writeRequest);
+            System.out.println(getSelf() + "Removed in OnTimeOut");
         }
     }
 
