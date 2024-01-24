@@ -159,12 +159,12 @@ public class Node extends AbstractActor {
         } else {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key));
             if(holdingNode == getSelf()) {
-                m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null), getSelf());
+                m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null, m.message_id), getSelf());
             } else {
                 this.readRequests.add(m);
 
                 getContext().system().scheduler().scheduleOnce(
-                        Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                        Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
                         getSelf(),                                                       // destination actor reference
                         new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"),       // the message to send
                         getContext().system().dispatcher(),                              // system dispatcher
@@ -197,7 +197,7 @@ public class Node extends AbstractActor {
                 data.SetValue(writeRequest.value, false);
             }
 
-            writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
+            writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
             getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
             this.writeRequests.remove(writeRequest);
             System.out.println(getSelf() + "Removed in OnNoValueFound");
@@ -250,7 +250,7 @@ public class Node extends AbstractActor {
                     System.out.println("Fatto! Guarda... la porta si è chiusa");
                     m.value.SetValue(writeRequest.value, true);
                     getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
-                    writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value), getSelf());
+                    writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
                     this.writeRequests.remove(writeRequest);
                     System.out.println(getSelf() + "Removed in OnReadResponse");
                 }
@@ -283,6 +283,10 @@ public class Node extends AbstractActor {
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
         // Multicast everyone
         Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
+
+
+        //TODO trova il modo di mantenere nella rete i dati del nodo uscente quando il successivo è in crash
+        //(timeout + diamo al next disponibile, tutti i nodi che entrano di conseguenza dovranno cercare nel primo nodo next in vita)
 
         // Get neighbor key
         Integer neighborKey = FindNext();
@@ -319,7 +323,7 @@ public class Node extends AbstractActor {
         //System.out.println("Node " + getSelf() + " added this to writeRequests: " + m.message_id);
         // Timeout for the write request
         getContext().system().scheduler().scheduleOnce(
-                Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
                 getSelf(),                                                       // destination actor reference
                 new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id, "write"),       // the message to send
                 getContext().system().dispatcher(),                              // system dispatcher
@@ -361,6 +365,7 @@ public class Node extends AbstractActor {
         Integer previousKey = FindPredecessor();
         Integer nextKey = FindNext();
 
+        //TODO aggiusta il check qui sotto, invia i dati che non sono più sotto la mia responsabilità prima di eliminarli
         for(Integer k : keySet) {
             if(IsInInterval(previousKey, this.key, k)) {
                 this.storage.remove(k);

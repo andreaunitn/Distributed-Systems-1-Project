@@ -106,6 +106,15 @@ public class Message {
             this.key = key;
             this.message_id = message_id;
         }
+
+        public ReadRequestMsg(ActorRef sender, Integer key) {
+            this.sender = sender;
+            this.key = key;
+            // Generate hash to distinguish requests
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            Date date = new Date();
+            this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
+        }
     }
 
     public static class ReadResponseMsg implements Serializable {
@@ -138,7 +147,7 @@ public class Message {
         public final Integer key;
         public final String value;
 
-        public int message_id;
+        public final int message_id;
 
         public WriteRequestMsg(ActorRef sender, Integer key, String value) {
             this.sender = sender;
@@ -148,14 +157,16 @@ public class Message {
             // Generate hash to distinguish requests
             DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
             Date date = new Date();
-            message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
+            this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
     }
 
     public static class WriteResponseMsg implements Serializable {
         public final String value;
-        public WriteResponseMsg(String value){
+        public final int message_id;
+        public WriteResponseMsg(String value, int message_id){
             this.value = value;
+            this.message_id =message_id;
         }
     }
 
@@ -204,11 +215,13 @@ public class Message {
         public final ActorRef readSender;
         public final DataEntry data;
         public final Integer key;
-        public ErrorNoValueFound(String msg, ActorRef readSender, Integer key, DataEntry data) {
+        public final int message_id;
+        public ErrorNoValueFound(String msg, ActorRef readSender, Integer key, DataEntry data, int message_id) {
             super(msg);
             this.readSender = readSender;
             this.data = data;
             this.key = key;
+            this.message_id = message_id;
         }
     }
 

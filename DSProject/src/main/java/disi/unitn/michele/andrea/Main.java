@@ -88,7 +88,7 @@ public class Main {
                         if(!ring.AvailableNodes.isEmpty()) {
 
                             Random generator = new Random();
-                            Object[] values = ring.HashTable.values().toArray();
+                            Object[] values = ring.AvailableNodes.toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
                             System.out.println(randomBootstrapper);
                             node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
