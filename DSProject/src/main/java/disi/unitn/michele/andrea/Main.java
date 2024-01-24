@@ -125,7 +125,7 @@ public class Main {
                     node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
 
                     ring.HashTable.remove(k);
-                    ring.AvailableNodes.remove(k);
+                    ring.AvailableNodes.remove(node);
 
                     System.out.println("\t\t Node successfully deleted\n");
 
