@@ -218,12 +218,14 @@ public class Message {
         public final Integer key;
         public final String msg;
         public final int message_id;
+        public final String operation;
 
-        public TimeoutMsg(ActorRef recipient, Integer key, String msg, int message_id) {
+        public TimeoutMsg(ActorRef recipient, Integer key, String msg, int message_id, String operation) {
             this.recipient = recipient;
             this.key = key;
             this.msg = msg;
             this.message_id = message_id;
+            this.operation = operation;
         }
     }
 }

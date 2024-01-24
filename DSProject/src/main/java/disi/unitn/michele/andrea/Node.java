@@ -21,6 +21,7 @@ public class Node extends AbstractActor {
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
     private HashSet<Message.WriteRequestMsg> writeRequests;
+    private HashSet<Message.ReadRequestMsg> readRequests;
 
     public Node(Integer key) {
         this.key = key;
@@ -29,6 +30,7 @@ public class Node extends AbstractActor {
         this.network = new HashMap<>();
         this.network.put(key, getSelf());
         this.writeRequests = new HashSet<>();
+        this.readRequests = new HashSet<>();
     }
 
     static public Props props(Integer key) {
@@ -159,6 +161,16 @@ public class Node extends AbstractActor {
             if(holdingNode == getSelf()) {
                 m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null), getSelf());
             } else {
+                this.readRequests.add(m);
+
+                getContext().system().scheduler().scheduleOnce(
+                        Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                        getSelf(),                                                       // destination actor reference
+                        new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"),       // the message to send
+                        getContext().system().dispatcher(),                              // system dispatcher
+                        getSelf()                                                        // source of the message (myself)
+                );
+
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
             }
         }
@@ -221,7 +233,7 @@ public class Node extends AbstractActor {
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                     this.isJoining = false;
                 }
-            } else { // Node is reading to write
+            } else { // Node is ready to write
 
                 Message.WriteRequestMsg writeRequest = null;
                 //System.out.println("is writeRequests Empty: " + writeRequests.isEmpty());
@@ -249,6 +261,19 @@ public class Node extends AbstractActor {
                 //TODO controlla che versione dato da inserire sia maggiore
             }
         } else {
+            Message.ReadRequestMsg readRequest = null;
+            for(Message.ReadRequestMsg r: this.readRequests) {
+                System.out.println("w.message_id: " + r.message_id + "; m.message_id: " + m.message_id);
+                if(r.message_id == m.message_id) {
+                    readRequest = r;
+                    break;
+                }
+            }
+
+            if(readRequest != null) {
+                this.readRequests.remove(readRequest);
+            }
+
             // Forward request
             m.recipient.tell(m, getSelf());
         }
@@ -296,7 +321,7 @@ public class Node extends AbstractActor {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(400, TimeUnit.MILLISECONDS),                    // how frequently generate them
                 getSelf(),                                                       // destination actor reference
-                new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id),       // the message to send
+                new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id, "write"),       // the message to send
                 getContext().system().dispatcher(),                              // system dispatcher
                 getSelf()                                                        // source of the message (myself)
         );
@@ -364,20 +389,36 @@ public class Node extends AbstractActor {
 
     // Node timeout
     private void OnTimeOut(Message.TimeoutMsg m) {
-
-        Message.WriteRequestMsg writeRequest = null;
-        for(Message.WriteRequestMsg w : this.writeRequests) {
-            System.out.println("Timeout w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
-            if(w.message_id == m.message_id) {
-                writeRequest = w;
-                break;
+        if(m.operation.equals("write")) {
+            Message.WriteRequestMsg writeRequest = null;
+            for(Message.WriteRequestMsg w : this.writeRequests) {
+                System.out.println("Timeout w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+                if(w.message_id == m.message_id) {
+                    writeRequest = w;
+                    break;
+                }
             }
-        }
 
-        if(writeRequest != null) {
-            m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
-            this.writeRequests.remove(writeRequest);
-            System.out.println(getSelf() + "Removed in OnTimeOut");
+            if(writeRequest != null) {
+                m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
+                this.writeRequests.remove(writeRequest);
+                System.out.println(getSelf() + "Removed writeRequest in OnTimeOut");
+            }
+        } else if(m.operation.equals("read")) {
+            Message.ReadRequestMsg readRequest = null;
+            for(Message.ReadRequestMsg r: this.readRequests) {
+                System.out.println("Timeout w.message_id: " + r.message_id + "; m.message_id: " + m.message_id);
+                if(r.message_id == m.message_id) {
+                    readRequest = r;
+                    break;
+                }
+            }
+
+            if(readRequest != null) {
+                m.recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
+                this.readRequests.remove(readRequest);
+                System.out.println(getSelf() + "Removed readRequest in OnTimeOut");
+            }
         }
     }
 
