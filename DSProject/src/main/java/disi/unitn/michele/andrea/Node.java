@@ -129,10 +129,11 @@ public class Node extends AbstractActor {
 
         if(this.valuesToCheck == 0) {
             Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+            this.isJoining = false;
         }
 
-        if(isRecovering) {
-            isRecovering = false;
+        if(this.isRecovering) {
+            this.isRecovering = false;
         }
     }
 
@@ -204,16 +205,21 @@ public class Node extends AbstractActor {
         //System.out.println("Node: " + getSelf() + " ReadResponse: " + m.recipient + " " + m.key + " " + m.value + " " + m.message_id);
         // Node is the recipient of the message
         if(m.recipient == getSelf()) {
+            System.out.println(this.isJoining);
+            System.out.println(this.valuesToCheck);
             // Node is reading to join the network
             if(this.isJoining) {
                 // Check data is OK
                 this.storage.put(m.key, m.value);
-                this.valuesToCheck--;
+                if(this.valuesToCheck > 0) {
+                    this.valuesToCheck--;
+                }
 
                 if(this.valuesToCheck == 0) {
+                    System.out.println("valuesToCheck == 0");
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
-                    isJoining = false;
+                    this.isJoining = false;
                 }
             } else { // Node is reading to write
 
@@ -221,7 +227,7 @@ public class Node extends AbstractActor {
                 //System.out.println("is writeRequests Empty: " + writeRequests.isEmpty());
                 for(Message.WriteRequestMsg w : this.writeRequests) {
                     //System.out.println("w.key: " + w.key + "; w.sender: " + w.sender + "; m.key: " + m.key + "; m.recipient: " + m.recipient);
-                    //System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+                    System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
                     if(w.message_id == m.message_id) {
                         writeRequest = w;
                         break;
@@ -361,7 +367,7 @@ public class Node extends AbstractActor {
 
         Message.WriteRequestMsg writeRequest = null;
         for(Message.WriteRequestMsg w : this.writeRequests) {
-            //System.out.println("PIRLAA w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+            System.out.println("Timeout w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
             if(w.message_id == m.message_id) {
                 writeRequest = w;
                 break;

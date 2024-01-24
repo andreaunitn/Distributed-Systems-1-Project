@@ -90,7 +90,7 @@ public class Main {
                             Random generator = new Random();
                             Object[] values = ring.HashTable.values().toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
-
+                            System.out.println(randomBootstrapper);
                             node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
                         }
 
