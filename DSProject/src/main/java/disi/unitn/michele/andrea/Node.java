@@ -22,6 +22,7 @@ public class Node extends AbstractActor {
     private HashMap<Integer, DataEntry> storage;
     private HashSet<Message.WriteRequestMsg> writeRequests;
     private HashSet<Message.ReadRequestMsg> readRequests;
+    private HashSet<Message.DataRequestMsg> dataRequests;
 
     public Node(Integer key) {
         this.key = key;
@@ -31,6 +32,7 @@ public class Node extends AbstractActor {
         this.network.put(key, getSelf());
         this.writeRequests = new HashSet<>();
         this.readRequests = new HashSet<>();
+        this.dataRequests = new HashSet<>();
     }
 
     static public Props props(Integer key) {
@@ -65,6 +67,7 @@ public class Node extends AbstractActor {
                 .match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
                 .match(Message.ErrorMsg.class, this::OnError)
                 .match(Message.TimeoutMsg.class, this::OnTimeOut)
+                .match(Message.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
                 .build();
     }
 
@@ -108,7 +111,7 @@ public class Node extends AbstractActor {
 
     // Send storage to the new node
     private void OnDataRequest(Message.DataRequestMsg m) {
-        m.sender.tell(new Message.DataResponseMsg(this.storage, this.key), getSelf());
+        m.sender.tell(new Message.DataResponseMsg(this.storage, this.key, m.message_id), getSelf());
     }
 
     // Node receives the data storage from the neighbor
@@ -135,7 +138,19 @@ public class Node extends AbstractActor {
         }
 
         if(this.isRecovering) {
-            this.isRecovering = false;
+
+            Message.DataRequestMsg dataRequest = null;
+            for(Message.DataRequestMsg d: this.dataRequests) {
+                if(d.message_id == m.message_id) {
+                    dataRequest = d;
+                    break;
+                }
+            }
+
+            if(dataRequest != null) {
+                this.dataRequests.remove(dataRequest);
+                this.isRecovering = false;
+            }
         }
     }
 
@@ -336,7 +351,7 @@ public class Node extends AbstractActor {
     private void OnCrashRequestOrder(Message.CrashRequestOrder m) {
         // Change dispatcher and set itself as crashed
         getContext().become(crashedBehavior());
-        isCrashed = true;
+        this.isCrashed = true;
     }
 
     // Node receives the order to recovery from the crashed state
@@ -347,7 +362,7 @@ public class Node extends AbstractActor {
         }
 
         getContext().become(onlineBehavior());
-        isCrashed = false;
+        this.isCrashed = false;
     }
 
     // Tell node to begin recovery procedure
@@ -357,7 +372,7 @@ public class Node extends AbstractActor {
 
     // Node begins recovery protocol by asking other nodes the data items
     private void OnNetworkResponseMsg(Message.NetworkResponseMsg m) {
-        isRecovering = true;
+        this.isRecovering = true;
 
         // Forgets items it is no longer responsible for
         HashSet<Integer> keySet = new HashSet<>(this.storage.keySet());
@@ -372,8 +387,17 @@ public class Node extends AbstractActor {
             }
         }
 
+        Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                getSelf(),                                                       // destination actor reference
+                new Message.NeighborTimeoutMsg(getSelf(), this.network.get(nextKey), nextKey, dataRequest.message_id),       // the message to send
+                getContext().system().dispatcher(),                              // system dispatcher
+                getSelf()                                                        // source of the message (myself)
+        );
+
         // Request items we are responsible for
-        this.network.get(nextKey).tell(new Message.DataRequestMsg(getSelf()), getSelf());
+        this.network.get(nextKey).tell(dataRequest, getSelf());
     }
 
     // Print node storage
@@ -530,6 +554,27 @@ public class Node extends AbstractActor {
             }
         } else {
             this.storage.put(key, new DataEntry(value.GetValue()));
+        }
+    }
+
+    public void OnNeighborTimeout(Message.NeighborTimeoutMsg m) {
+        ActorRef neighbor = this.network.get(FindNext(m.key));
+
+        Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
+
+        if(neighbor != getSelf()) {
+            getContext().system().scheduler().scheduleOnce(
+                    Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                    getSelf(),                                                       // destination actor reference
+                    new Message.NeighborTimeoutMsg(getSelf(), neighbor, FindNext(m.key), dataRequest.message_id),       // the message to send
+                    getContext().system().dispatcher(),                              // system dispatcher
+                    getSelf()                                                        // source of the message (myself)
+            );
+
+            // Contact next neighbor if the first one is crashed
+            neighbor.tell(dataRequest, getSelf());
+        } else {
+            System.out.println("There are no other nodes alive in the network");
         }
     }
 }

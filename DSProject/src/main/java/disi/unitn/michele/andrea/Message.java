@@ -1,5 +1,6 @@
 package disi.unitn.michele.andrea;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
@@ -56,17 +57,25 @@ public class Message {
 
     public static class DataRequestMsg implements Serializable {
         public final ActorRef sender;
+        public final int message_id;
+
         public DataRequestMsg(ActorRef sender) {
             this.sender = sender;
+
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
+            Date date = new Date();
+            this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
     }
 
     public static class DataResponseMsg implements Serializable {
         public final Map<Integer, DataEntry> storage;
         public final Integer key;
-        public DataResponseMsg(HashMap<Integer, DataEntry> storage, Integer key) {
+        public final int message_id;
+        public DataResponseMsg(HashMap<Integer, DataEntry> storage, Integer key, int message_id) {
             this.storage = Collections.unmodifiableMap(storage);
             this.key = key;
+            this.message_id = message_id;
         }
     }
 
@@ -111,7 +120,7 @@ public class Message {
             this.sender = sender;
             this.key = key;
             // Generate hash to distinguish requests
-            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
             Date date = new Date();
             this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
@@ -155,7 +164,7 @@ public class Message {
             this.value = value;
 
             // Generate hash to distinguish requests
-            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss");
+            DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
             Date date = new Date();
             this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
@@ -166,7 +175,7 @@ public class Message {
         public final int message_id;
         public WriteResponseMsg(String value, int message_id){
             this.value = value;
-            this.message_id =message_id;
+            this.message_id = message_id;
         }
     }
 
@@ -239,6 +248,20 @@ public class Message {
             this.msg = msg;
             this.message_id = message_id;
             this.operation = operation;
+        }
+    }
+
+    public static class NeighborTimeoutMsg implements Serializable {
+        public final ActorRef sender;
+        public final ActorRef recipient;
+        public final Integer key;
+        public final int message_id;
+
+        public NeighborTimeoutMsg(ActorRef sender, ActorRef recipient, Integer key, int message_id) {
+            this.sender = sender;
+            this.recipient = recipient;
+            this.key = key;
+            this.message_id = message_id;
         }
     }
 }
