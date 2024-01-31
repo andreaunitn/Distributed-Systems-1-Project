@@ -100,6 +100,13 @@ public class Message {
         }
     }
 
+    public static class PassDataItemResponseMsg implements Serializable {
+        public final int key;
+        public PassDataItemResponseMsg(int key) {
+            this.key = key;
+        }
+    }
+
     public static class PrintNode implements Serializable {
         public PrintNode () {}
     }
@@ -262,6 +269,14 @@ public class Message {
             this.recipient = recipient;
             this.key = key;
             this.message_id = message_id;
+        }
+    }
+
+    public static class PassDataTimeoutMsg implements Serializable {
+        public final Integer key;
+
+        public PassDataTimeoutMsg(Integer key) {
+            this.key = key;
         }
     }
 }

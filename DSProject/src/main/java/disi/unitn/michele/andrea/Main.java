@@ -121,8 +121,8 @@ public class Main {
                     ActorRef node = ring.HashTable.get(k);
                     node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
 
-                    // Tell sender node to terminate
-                    node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
+                    // Tell sender node to terminate (rimosso per impedire eliminazione prima che dati vengano salvati da un vicino)
+                    //node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
 
                     ring.HashTable.remove(k);
                     ring.AvailableNodes.remove(node);

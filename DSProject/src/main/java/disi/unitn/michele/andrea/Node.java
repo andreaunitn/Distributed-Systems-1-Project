@@ -17,6 +17,7 @@ public class Node extends AbstractActor {
     private boolean isJoining = false;
     private boolean isRecovering = false;
     private int valuesToCheck = 0;
+    private boolean canDie = false;
 
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
@@ -68,6 +69,8 @@ public class Node extends AbstractActor {
                 .match(Message.ErrorMsg.class, this::OnError)
                 .match(Message.TimeoutMsg.class, this::OnTimeOut)
                 .match(Message.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
+                .match(Message.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
+                .match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
                 .build();
     }
 
@@ -296,9 +299,6 @@ public class Node extends AbstractActor {
 
     // Node receives the command to leave the network
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
-        // Multicast everyone
-        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
-
 
         //TODO trova il modo di mantenere nella rete i dati del nodo uscente quando il successivo è in crash
         //(timeout + diamo al next disponibile, tutti i nodi che entrano di conseguenza dovranno cercare nel primo nodo next in vita)
@@ -311,11 +311,26 @@ public class Node extends AbstractActor {
             // Contact neighbor and pass data items
             node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
         }
+
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                getSelf(),                                                       // destination actor reference
+                new Message.PassDataTimeoutMsg(neighborKey),       // the message to send
+                getContext().system().dispatcher(),                              // system dispatcher
+                getSelf()                                                        // source of the message (myself)
+        );
     }
 
     // Node includes receiving items to its storage
     private void OnPassDataItems(Message.PassDataItemsMsg m) {
         this.storage.putAll(m.storage);
+        getSender().tell(new Message.PassDataItemResponseMsg(this.key), getSelf());
+    }
+
+    private void OnPassDataItemResponseMsg(Message.PassDataItemResponseMsg m) {
+        // Multicast everyone
+        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
+        this.canDie = true;
     }
 
     // Removes the leaving node from the network
@@ -575,6 +590,31 @@ public class Node extends AbstractActor {
             neighbor.tell(dataRequest, getSelf());
         } else {
             System.out.println("There are no other nodes alive in the network");
+        }
+    }
+
+    public void OnPassDataTimeoutMsg(Message.PassDataTimeoutMsg m) {
+
+        if(this.canDie) {
+            getSelf().tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
+        }
+        else {
+            // Get neighbor key
+            Integer neighborKey = FindNext(m.key);
+            if(neighborKey != this.key) {
+                ActorRef node = this.network.get(neighborKey);
+
+                // Contact neighbor and pass data items
+                node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
+            }
+
+            getContext().system().scheduler().scheduleOnce(
+                    Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                    getSelf(),                                                       // destination actor reference
+                    new Message.PassDataTimeoutMsg(neighborKey),       // the message to send
+                    getContext().system().dispatcher(),                              // system dispatcher
+                    getSelf()                                                        // source of the message (myself)
+            );
         }
     }
 }
