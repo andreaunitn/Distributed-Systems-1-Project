@@ -402,6 +402,7 @@ public class Node extends AbstractActor {
             }
         }
 
+        System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + nextKey);
         Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
@@ -575,6 +576,7 @@ public class Node extends AbstractActor {
     public void OnNeighborTimeout(Message.NeighborTimeoutMsg m) {
         ActorRef neighbor = this.network.get(FindNext(m.key));
 
+        System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + neighbor);
         Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
 
         if(neighbor != getSelf()) {
