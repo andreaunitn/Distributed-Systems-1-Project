@@ -119,6 +119,7 @@ public class Node extends AbstractActor {
 
     // Node receives the data storage from the neighbor
     private void OnDataResponse(Message.DataResponseMsg m) {
+        System.out.println("OnDataResponse. " + "m.message_id: " + m.message_id);
         // Take only necessary data
         Map<Integer, DataEntry> s = m.storage;
 
@@ -153,6 +154,7 @@ public class Node extends AbstractActor {
             if(dataRequest != null) {
                 this.dataRequests.remove(dataRequest);
                 this.isRecovering = false;
+                getSender().tell(new Message.NodeAnnounceMsg(this.key), getSelf());
             }
         }
     }
@@ -389,6 +391,10 @@ public class Node extends AbstractActor {
     private void OnNetworkResponseMsg(Message.NetworkResponseMsg m) {
         this.isRecovering = true;
 
+        // Update network
+        this.network.clear();
+        this.network.putAll(m.network);
+
         // Forgets items it is no longer responsible for
         HashSet<Integer> keySet = new HashSet<>(this.storage.keySet());
 
@@ -412,6 +418,8 @@ public class Node extends AbstractActor {
                 getSelf()                                                        // source of the message (myself)
         );
 
+        this.dataRequests.add(dataRequest);
+        System.out.println("Creating timer " + dataRequest.message_id);
         // Request items we are responsible for
         this.network.get(nextKey).tell(dataRequest, getSelf());
     }
@@ -574,24 +582,38 @@ public class Node extends AbstractActor {
     }
 
     public void OnNeighborTimeout(Message.NeighborTimeoutMsg m) {
-        ActorRef neighbor = this.network.get(FindNext(m.key));
 
-        System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + neighbor);
-        Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
+        Message.DataRequestMsg dataRequest = null;
+        for(Message.DataRequestMsg d: this.dataRequests) {
+            if(d.message_id == m.message_id) {
+                dataRequest = d;
+                break;
+            }
+        }
 
-        if(neighbor != getSelf()) {
-            getContext().system().scheduler().scheduleOnce(
-                    Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                    getSelf(),                                                       // destination actor reference
-                    new Message.NeighborTimeoutMsg(getSelf(), neighbor, FindNext(m.key), dataRequest.message_id),       // the message to send
-                    getContext().system().dispatcher(),                              // system dispatcher
-                    getSelf()                                                        // source of the message (myself)
-            );
+        if(dataRequest != null) {
+            this.dataRequests.remove(dataRequest);
 
-            // Contact next neighbor if the first one is crashed
-            neighbor.tell(dataRequest, getSelf());
-        } else {
-            System.out.println("There are no other nodes alive in the network");
+            ActorRef neighbor = this.network.get(FindNext(m.key));
+
+            System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + neighbor);
+            Message.DataRequestMsg newDataRequest = new Message.DataRequestMsg(getSelf());
+
+            if(neighbor != getSelf()) {
+                getContext().system().scheduler().scheduleOnce(
+                        Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                        getSelf(),                                                       // destination actor reference
+                        new Message.NeighborTimeoutMsg(getSelf(), neighbor, FindNext(m.key), newDataRequest.message_id),       // the message to send
+                        getContext().system().dispatcher(),                              // system dispatcher
+                        getSelf()                                                        // source of the message (myself)
+                );
+
+                this.dataRequests.add(newDataRequest);
+                // Contact next neighbor if the first one is crashed
+                neighbor.tell(newDataRequest, getSelf());
+            } else {
+                System.out.println("There are no other nodes alive in the network");
+            }
         }
     }
 
