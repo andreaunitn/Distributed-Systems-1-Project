@@ -107,9 +107,19 @@ public class Node extends AbstractActor {
         // Find neighbor
         Integer neighborKey = FindNext();
         ActorRef node = this.network.get(neighborKey);
+        Message.DataRequestMsg newMsg = new Message.DataRequestMsg(getSelf());
+
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
+                getSelf(),                                                       // destination actor reference
+                new Message.NeighborTimeoutMsg(m.sender, node, neighborKey, newMsg.message_id),       // the message to send
+                getContext().system().dispatcher(),                              // system dispatcher
+                getSelf()                                                        // source of the message (myself)
+        );
+        this.dataRequests.add(newMsg);
 
         // Contact neighbor and request data
-        node.tell(new Message.DataRequestMsg(getSelf()), getSelf());
+        node.tell(newMsg, getSelf());
     }
 
     // Send storage to the new node
@@ -136,13 +146,27 @@ public class Node extends AbstractActor {
             }
         }
 
+        if(this.isJoining) {
+            System.out.println("sender: " + getSender());
+            Message.DataRequestMsg dataRequest = null;
+            for(Message.DataRequestMsg d: this.dataRequests) {
+                if(d.message_id == m.message_id) {
+                    dataRequest = d;
+                    break;
+                }
+            }
+
+            if(dataRequest != null) {
+                this.dataRequests.remove(dataRequest);
+            }
+        }
+
         if(this.valuesToCheck == 0) {
             Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
             this.isJoining = false;
         }
 
         if(this.isRecovering) {
-
             Message.DataRequestMsg dataRequest = null;
             for(Message.DataRequestMsg d: this.dataRequests) {
                 if(d.message_id == m.message_id) {
