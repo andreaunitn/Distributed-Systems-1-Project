@@ -1,17 +1,18 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 
-import java.io.Serializable;
-import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
-import java.util.Date;
+import java.io.Serializable;
+import java.text.DateFormat;
 import java.util.HashMap;
+import java.util.Date;
 import java.util.Map;
 
 public class Message {
+
+    public static class BaseMessage {}
 
     // Main
     public static class JoinNetworkOrder implements Serializable {
@@ -242,7 +243,7 @@ public class Message {
     }
 
     // Timeout
-    public static class TimeoutMsg implements Serializable {
+    public static class TimeoutMsg extends BaseMessage implements Serializable {
         public final ActorRef recipient;
         public final Integer key;
         public final String msg;
@@ -258,7 +259,7 @@ public class Message {
         }
     }
 
-    public static class NeighborTimeoutMsg implements Serializable {
+    public static class NeighborTimeoutMsg extends BaseMessage implements Serializable {
         public final ActorRef sender;
         public final ActorRef recipient;
         public final Integer key;
@@ -272,7 +273,7 @@ public class Message {
         }
     }
 
-    public static class PassDataTimeoutMsg implements Serializable {
+    public static class PassDataTimeoutMsg extends BaseMessage implements Serializable {
         public final Integer key;
 
         public PassDataTimeoutMsg(Integer key) {

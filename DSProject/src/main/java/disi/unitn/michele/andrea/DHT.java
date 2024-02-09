@@ -10,18 +10,18 @@ import java.util.Set;
 
 public class DHT {
 
-    public Map<Integer, ActorRef> HashTable;
-    public Set<ActorRef> AvailableNodes;
+    public Map<Integer, ActorRef> hash_table;
+    public Set<ActorRef> available_nodes;
 
     public DHT() {
-        HashTable = new HashMap<>();
-        AvailableNodes = new HashSet<>();
+        this.hash_table = new HashMap<>();
+        this.available_nodes = new HashSet<>();
     }
 
     // Print all nodes of the network (also the crashed ones) with the corresponding content
     public void PrintNetwork() {
 
-        HashTable.forEach((key, value) -> {
+        this.hash_table.forEach((key, value) -> {
 
             try {
                 TimeUnit.MILLISECONDS.sleep(100);

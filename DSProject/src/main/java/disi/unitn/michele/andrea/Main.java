@@ -3,8 +3,8 @@ package disi.unitn.michele.andrea;
 import akka.actor.ActorSystem;
 import akka.actor.ActorRef;
 
-import java.util.*;
 import java.util.concurrent.TimeUnit;
+import java.util.*;
 
 public class Main {
     public static void main(String[] args) throws InterruptedException {
@@ -42,34 +42,33 @@ public class Main {
             switch(op) {
                 case 1:
                     System.out.print("\t How many clients to create? ");
-                    int N_CLIENTS = in.nextInt();
+                    int num_clients = in.nextInt();
 
-                    while(N_CLIENTS < 1) {
+                    while(num_clients < 1) {
                         System.out.print("\t How many clients to create? ");
-                        N_CLIENTS = in.nextInt();
+                        num_clients = in.nextInt();
                     }
 
-                    for(int i = 0; i < N_CLIENTS; i++) {
+                    for(int i = 0; i < num_clients; i++) {
                         clients.put(client_id, system.actorOf(Client.props(client_id), "Client" + client_id));
                         client_id++;
                     }
 
                     System.out.println("\t Client successfully created\n");
-
                     break;
 
                 case 2:
                     System.out.print("\t How many nodes to create? ");
-                    int N_NODES = in.nextInt();
+                    int num_nodes = in.nextInt();
 
-                    while(N_NODES < 1 || N_NODES > MAX_NODES) {
+                    while(num_nodes < 1 || num_nodes > MAX_NODES) {
                         System.out.print("\t How many nodes to create? ");
-                        N_NODES = in.nextInt();
+                        num_nodes = in.nextInt();
                     }
 
-                    for(int i = 0; i < N_NODES; i++) {
+                    for(int i = 0; i < num_nodes; i++) {
                         System.out.print("\t\t Key (0-1023): ");
-                        Integer k = in.nextInt();
+                        int k = in.nextInt();
 
                         while(k < 0 || k > (MAX_NODES - 1)) {
                             System.out.println("\t\t Wrong key");
@@ -77,7 +76,7 @@ public class Main {
                             k = in.nextInt();
                         }
 
-                        while(ring.HashTable.containsKey(k)) {
+                        while(ring.hash_table.containsKey(k)) {
                             System.out.println("\t\t The specified key already exists, please choose another one");
                             System.out.print("\t\t Key (0-1023): ");
                             k = in.nextInt();
@@ -85,99 +84,92 @@ public class Main {
 
                         ActorRef node = system.actorOf(Node.props(k), "Node" + k);
 
-                        if(!ring.AvailableNodes.isEmpty()) {
+                        if(!ring.available_nodes.isEmpty()) {
 
                             Random generator = new Random();
-                            Object[] values = ring.AvailableNodes.toArray();
+                            Object[] values = ring.available_nodes.toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
-                            System.out.println(randomBootstrapper);
                             node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
                         }
 
-                        ring.HashTable.put(k, node);
-                        ring.AvailableNodes.add(node);
+                        ring.hash_table.put(k, node);
+                        ring.available_nodes.add(node);
                     }
 
                     System.out.println("\t\t Node successfully created\n");
-
                     break;
 
                 case 3:
-                    if(ring.HashTable.size() == 0) {
+                    if(ring.hash_table.isEmpty()) {
                         System.out.println("\t Cannot delete any node because the network is empty");
                         System.out.println();
                         break;
                     }
 
                     System.out.print("\t Key: ");
-                    Integer k = in.nextInt();
+                    int k = in.nextInt();
 
-                    while(!ring.HashTable.containsKey(k) && !ring.AvailableNodes.contains(ring.HashTable.get(k))) {
+                    while(!ring.hash_table.containsKey(k) && !ring.available_nodes.contains(ring.hash_table.get(k))) {
                         System.out.println("\t No node to delete with the specified key (might be in crashed state)");
                         System.out.print("\t Key: ");
                         k = in.nextInt();
                     }
 
-                    ActorRef node = ring.HashTable.get(k);
+                    ActorRef node = ring.hash_table.get(k);
                     node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
 
-                    // Tell sender node to terminate (rimosso per impedire eliminazione prima che dati vengano salvati da un vicino)
-                    //node.tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
-
-                    ring.HashTable.remove(k);
-                    ring.AvailableNodes.remove(node);
+                    ring.hash_table.remove(k);
+                    ring.available_nodes.remove(node);
 
                     System.out.println("\t\t Node successfully deleted\n");
-
                     break;
 
                 case 4:
-                    if(clients.size() < 1 || ring.AvailableNodes.size() == 0) {
+                    if(clients.isEmpty() || ring.available_nodes.isEmpty()) {
                         System.out.println("\t Cannot perform get because there are no clients or the network does not contain any available node");
                         System.out.println();
                         break;
                     }
 
                     System.out.print("\t Select client: ");
-                    Integer ClientKey = in.nextInt();
+                    int client_key = in.nextInt();
 
-                    while(!clients.containsKey(ClientKey) ) {
+                    while(!clients.containsKey(client_key)) {
                         System.out.println("\t There is no client with the specified key");
                         System.out.print("\t Select client: ");
-                        ClientKey = in.nextInt();
+                        client_key = in.nextInt();
                     }
 
                     System.out.print("\t\t Key: ");
-                    Integer key = in.nextInt();
+                    int key = in.nextInt();
 
-                    List<Integer> keysAsArray = new ArrayList<>(ring.HashTable.keySet());
-                    ActorRef n = ring.HashTable.get(keysAsArray.get(rand.nextInt(keysAsArray.size())));
-                    ActorRef c = clients.get(ClientKey);
+                    List<Integer> keys_array = new ArrayList<>(ring.hash_table.keySet());
+                    ActorRef n = ring.hash_table.get(keys_array.get(rand.nextInt(keys_array.size())));
+                    ActorRef c = clients.get(client_key);
                     c.tell(new Message.GetRequestOrderMsg(n, key), ActorRef.noSender());
 
-                    TimeUnit.MILLISECONDS.sleep(500);
+                    TimeUnit.MILLISECONDS.sleep(400);
                     System.out.println();
-
                     break;
 
                 case 5:
-                    if(clients.size() < 1 || ring.AvailableNodes.size() == 0) {
+                    if(clients.isEmpty() || ring.available_nodes.isEmpty()) {
                         System.out.println("\t Cannot perform update because there are no clients or the network does not contain any available node");
                         System.out.println();
                         break;
                     }
 
                     System.out.print("\t Select client: ");
-                    Integer Clientkey = in.nextInt();
+                    int c_key = in.nextInt();
 
-                    while(!clients.containsKey(Clientkey) ) {
+                    while(!clients.containsKey(c_key)) {
                         System.out.println("\t There is no client with the specified key");
                         System.out.print("\t Select client: ");
-                        Clientkey = in.nextInt();
+                        c_key = in.nextInt();
                     }
 
                     System.out.print("\t\t Key: ");
-                    Integer Key = in.nextInt();
+                    int Key = in.nextInt();
                     System.out.println();
 
                     in.nextLine();
@@ -185,78 +177,73 @@ public class Main {
                     System.out.print("\t\t Value: ");
                     String value = in.nextLine();
 
-                    //List<Integer> keysArray = new ArrayList<>(ring.HashTable.keySet());
-                    List<ActorRef> keysArray = new ArrayList<>(ring.AvailableNodes);
-                    ActorRef Node = keysArray.get(rand.nextInt(keysArray.size()));
-                    ActorRef Client = clients.get(Clientkey);
+                    List<ActorRef> keys_Array = new ArrayList<>(ring.available_nodes);
+                    ActorRef Node = keys_Array.get(rand.nextInt(keys_Array.size()));
+                    ActorRef Client = clients.get(c_key);
                     Client.tell(new Message.UpdateRequestOrderMsg(Node, Key, value), ActorRef.noSender());
 
                     TimeUnit.MILLISECONDS.sleep(500);
                     System.out.println();
-
                     break;
 
                 case 6:
 
-                    if(ring.HashTable.size() == 0 || ring.AvailableNodes.isEmpty()) {
+                    if(ring.hash_table.isEmpty() || ring.available_nodes.isEmpty()) {
                         System.out.println("\t Cannot make crash any node because there are no nodes available");
                         System.out.println();
                         break;
                     }
 
                     System.out.print("\t Key: ");
-                    Integer crashKey = in.nextInt();
+                    int crash_key = in.nextInt();
 
-                    if(!ring.HashTable.containsKey(crashKey) || !ring.AvailableNodes.contains(ring.HashTable.get(crashKey))) {
+                    if(!ring.hash_table.containsKey(crash_key) || !ring.available_nodes.contains(ring.hash_table.get(crash_key))) {
                         System.out.println("\t No node to make crash with the specified key (might be already in crashed state)");
                         System.out.println();
                         break;
                     }
 
-                    ActorRef crashNode = ring.HashTable.get(crashKey);
-                    crashNode.tell(new Message.CrashRequestOrder(), ActorRef.noSender());
+                    ActorRef crash_node = ring.hash_table.get(crash_key);
+                    crash_node.tell(new Message.CrashRequestOrder(), ActorRef.noSender());
 
-                    ring.AvailableNodes.remove(crashNode);
+                    ring.available_nodes.remove(crash_node);
 
                     System.out.println("\t\t Crash request sent\n");
-
                     break;
 
                 case 7:
 
-                    if(ring.HashTable.size() == 0 || ring.AvailableNodes.size() == ring.HashTable.size()) {
+                    if(ring.hash_table.isEmpty() || ring.available_nodes.size() == ring.hash_table.size()) {
                         System.out.println("\t Cannot recover any node because no node is crashed");
                         System.out.println();
                         break;
                     }
 
                     System.out.print("\t Key: ");
-                    Integer recoverKey = in.nextInt();
+                    int recover_key = in.nextInt();
 
-                    if(!ring.HashTable.containsKey(recoverKey) || ring.AvailableNodes.contains(ring.HashTable.get(recoverKey))) {
+                    if(!ring.hash_table.containsKey(recover_key) || ring.available_nodes.contains(ring.hash_table.get(recover_key))) {
                         System.out.println("\t No node to recover with the specified key (might be already recovered)");
                         System.out.println();
                         break;
                     }
 
-                    ActorRef recoverNode = ring.HashTable.get(recoverKey);
-                    ActorRef recoveryBoostrapNode = null;
+                    ActorRef recover_node = ring.hash_table.get(recover_key);
+                    ActorRef recovery_boostrap_node = null;
 
-                    if(ring.AvailableNodes.size() > 0) {
+                    if(!ring.available_nodes.isEmpty()) {
 
                         // Random node to be associated to the node that needs to recover
                         Random generator = new Random();
-                        Object[] values = ring.AvailableNodes.toArray();
-                        recoveryBoostrapNode = (ActorRef) values[generator.nextInt(values.length)];
+                        Object[] values = ring.available_nodes.toArray();
+                        recovery_boostrap_node = (ActorRef) values[generator.nextInt(values.length)];
 
                     }
 
-                    recoverNode.tell(new Message.RecoveryRequestOrder(recoveryBoostrapNode), ActorRef.noSender());
-
-                    ring.AvailableNodes.add(recoverNode);
+                    recover_node.tell(new Message.RecoveryRequestOrder(recovery_boostrap_node), ActorRef.noSender());
+                    ring.available_nodes.add(recover_node);
 
                     System.out.println("\t\t Recovery request sent\n");
-
                     break;
 
                 case 8:
@@ -273,11 +260,10 @@ public class Main {
                     });
 
                     System.out.println();
-
                     System.out.println("Nodes:");
                     ring.PrintNetwork();
 
-                    TimeUnit.SECONDS.sleep(3);
+                    TimeUnit.SECONDS.sleep(1);
                     break;
 
                 case 9:

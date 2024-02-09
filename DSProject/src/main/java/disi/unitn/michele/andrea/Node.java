@@ -109,13 +109,9 @@ public class Node extends AbstractActor {
         ActorRef node = this.network.get(neighborKey);
         Message.DataRequestMsg newMsg = new Message.DataRequestMsg(getSelf());
 
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.NeighborTimeoutMsg(m.sender, node, neighborKey, newMsg.message_id),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
+        // Timeout
+        SetTimeout(new Message.NeighborTimeoutMsg(m.sender, node, neighborKey, newMsg.message_id));
+
         this.dataRequests.add(newMsg);
 
         // Contact neighbor and request data
@@ -129,7 +125,6 @@ public class Node extends AbstractActor {
 
     // Node receives the data storage from the neighbor
     private void OnDataResponse(Message.DataResponseMsg m) {
-        System.out.println("OnDataResponse. " + "m.message_id: " + m.message_id);
         // Take only necessary data
         Map<Integer, DataEntry> s = m.storage;
 
@@ -147,7 +142,6 @@ public class Node extends AbstractActor {
         }
 
         if(this.isJoining) {
-            System.out.println("sender: " + getSender());
             Message.DataRequestMsg dataRequest = null;
             for(Message.DataRequestMsg d: this.dataRequests) {
                 if(d.message_id == m.message_id) {
@@ -207,13 +201,8 @@ public class Node extends AbstractActor {
             } else {
                 this.readRequests.add(m);
 
-                getContext().system().scheduler().scheduleOnce(
-                        Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                        getSelf(),                                                       // destination actor reference
-                        new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"),       // the message to send
-                        getContext().system().dispatcher(),                              // system dispatcher
-                        getSelf()                                                        // source of the message (myself)
-                );
+                // Timeout
+                SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"));
 
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
             }
@@ -244,7 +233,6 @@ public class Node extends AbstractActor {
             writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
             getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
             this.writeRequests.remove(writeRequest);
-            System.out.println(getSelf() + "Removed in OnNoValueFound");
         } else {
             System.out.println("I've sent a read request for a non existing value and I don't know why");
         }
@@ -257,12 +245,8 @@ public class Node extends AbstractActor {
 
     // Node performs read operation
     private void OnReadResponse(Message.ReadResponseMsg m) {
-
-        //System.out.println("Node: " + getSelf() + " ReadResponse: " + m.recipient + " " + m.key + " " + m.value + " " + m.message_id);
         // Node is the recipient of the message
         if(m.recipient == getSelf()) {
-            System.out.println(this.isJoining);
-            System.out.println(this.valuesToCheck);
             // Node is reading to join the network
             if(this.isJoining) {
                 // Check data is OK
@@ -272,7 +256,6 @@ public class Node extends AbstractActor {
                 }
 
                 if(this.valuesToCheck == 0) {
-                    System.out.println("valuesToCheck == 0");
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                     this.isJoining = false;
@@ -280,10 +263,7 @@ public class Node extends AbstractActor {
             } else { // Node is ready to write
 
                 Message.WriteRequestMsg writeRequest = null;
-                //System.out.println("is writeRequests Empty: " + writeRequests.isEmpty());
                 for(Message.WriteRequestMsg w : this.writeRequests) {
-                    //System.out.println("w.key: " + w.key + "; w.sender: " + w.sender + "; m.key: " + m.key + "; m.recipient: " + m.recipient);
-                    System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
                     if(w.message_id == m.message_id) {
                         writeRequest = w;
                         break;
@@ -291,12 +271,10 @@ public class Node extends AbstractActor {
                 }
 
                 if(writeRequest != null) {
-                    System.out.println("Fatto! Guarda... la porta si è chiusa");
                     m.value.SetValue(writeRequest.value, true);
                     getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
                     writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
                     this.writeRequests.remove(writeRequest);
-                    System.out.println(getSelf() + "Removed in OnReadResponse");
                 }
 
                 //OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
@@ -307,7 +285,6 @@ public class Node extends AbstractActor {
         } else {
             Message.ReadRequestMsg readRequest = null;
             for(Message.ReadRequestMsg r: this.readRequests) {
-                System.out.println("w.message_id: " + r.message_id + "; m.message_id: " + m.message_id);
                 if(r.message_id == m.message_id) {
                     readRequest = r;
                     break;
@@ -338,13 +315,8 @@ public class Node extends AbstractActor {
             node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
         }
 
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.PassDataTimeoutMsg(neighborKey),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
+        // SetTiemout
+        SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
     }
 
     // Node includes receiving items to its storage
@@ -376,15 +348,9 @@ public class Node extends AbstractActor {
         //TODO: put a timeout and print error if it ends
         ActorRef node = this.network.get(FindResponsible(m.key));
         this.writeRequests.add(m);
-        //System.out.println("Node " + getSelf() + " added this to writeRequests: " + m.message_id);
-        // Timeout for the write request
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id, "write"),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
+        // SetTimeout
+        SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id, "write"));
+
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key, m.message_id), getSelf());
     }
 
@@ -432,18 +398,12 @@ public class Node extends AbstractActor {
             }
         }
 
-        System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + nextKey);
         Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.NeighborTimeoutMsg(getSelf(), this.network.get(nextKey), nextKey, dataRequest.message_id),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
+
+        // Timeout
+        SetTimeout(new Message.NeighborTimeoutMsg(getSelf(), this.network.get(nextKey), nextKey, dataRequest.message_id));
 
         this.dataRequests.add(dataRequest);
-        System.out.println("Creating timer " + dataRequest.message_id);
         // Request items we are responsible for
         this.network.get(nextKey).tell(dataRequest, getSelf());
     }
@@ -469,7 +429,6 @@ public class Node extends AbstractActor {
         if(m.operation.equals("write")) {
             Message.WriteRequestMsg writeRequest = null;
             for(Message.WriteRequestMsg w : this.writeRequests) {
-                System.out.println("Timeout w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
                 if(w.message_id == m.message_id) {
                     writeRequest = w;
                     break;
@@ -479,12 +438,10 @@ public class Node extends AbstractActor {
             if(writeRequest != null) {
                 m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
                 this.writeRequests.remove(writeRequest);
-                System.out.println(getSelf() + "Removed writeRequest in OnTimeOut");
             }
         } else if(m.operation.equals("read")) {
             Message.ReadRequestMsg readRequest = null;
             for(Message.ReadRequestMsg r: this.readRequests) {
-                System.out.println("Timeout w.message_id: " + r.message_id + "; m.message_id: " + m.message_id);
                 if(r.message_id == m.message_id) {
                     readRequest = r;
                     break;
@@ -494,7 +451,6 @@ public class Node extends AbstractActor {
             if(readRequest != null) {
                 m.recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
                 this.readRequests.remove(readRequest);
-                System.out.println(getSelf() + "Removed readRequest in OnTimeOut");
             }
         }
     }
@@ -620,17 +576,11 @@ public class Node extends AbstractActor {
 
             ActorRef neighbor = this.network.get(FindNext(m.key));
 
-            System.out.println("OnNeighborTimeout. sender: " + getSelf() + ", recipient: " + neighbor);
             Message.DataRequestMsg newDataRequest = new Message.DataRequestMsg(getSelf());
 
             if(neighbor != getSelf()) {
-                getContext().system().scheduler().scheduleOnce(
-                        Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                        getSelf(),                                                       // destination actor reference
-                        new Message.NeighborTimeoutMsg(getSelf(), neighbor, FindNext(m.key), newDataRequest.message_id),       // the message to send
-                        getContext().system().dispatcher(),                              // system dispatcher
-                        getSelf()                                                        // source of the message (myself)
-                );
+                // Timeout
+                SetTimeout(new Message.NeighborTimeoutMsg(getSelf(), neighbor, FindNext(m.key), newDataRequest.message_id));
 
                 this.dataRequests.add(newDataRequest);
                 // Contact next neighbor if the first one is crashed
@@ -656,13 +606,23 @@ public class Node extends AbstractActor {
                 node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
             }
 
-            getContext().system().scheduler().scheduleOnce(
-                    Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                    getSelf(),                                                       // destination actor reference
-                    new Message.PassDataTimeoutMsg(neighborKey),       // the message to send
-                    getContext().system().dispatcher(),                              // system dispatcher
-                    getSelf()                                                        // source of the message (myself)
-            );
+            // Timeout
+            SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
         }
+    }
+
+
+    private void SetTimeout(Message.BaseMessage m) {
+        SetTimeout(m, 200);
+    }
+
+    private void SetTimeout(Message.BaseMessage m, int msTimer) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(msTimer, TimeUnit.MILLISECONDS),                                                       // how frequently generate them
+                getSelf(),                                                                                             // destination actor reference
+                m,                                                                                                     // the message to send
+                getContext().system().dispatcher(),                                                                    // system dispatcher
+                getSelf()                                                                                              // source of the message (myself)
+        );
     }
 }

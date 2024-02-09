@@ -1,25 +1,26 @@
 package disi.unitn.michele.andrea;
 
+import scala.concurrent.duration.Duration;
 import akka.actor.AbstractActor;
 import akka.actor.Props;
-import scala.concurrent.duration.Duration;
 
-import java.util.HashSet;
 import java.util.concurrent.TimeUnit;
+import java.util.HashSet;
+import java.util.Iterator;
 
 public class Client extends AbstractActor {
 
-    private final Integer key;
-    private final HashSet<Message.WriteRequestMsg> writeRequests;
-    private final HashSet<Message.ReadRequestMsg> readRequests;
+    private final int key;
+    private final HashSet<Message.WriteRequestMsg> write_requests;
+    private final HashSet<Message.ReadRequestMsg> read_requests;
 
-    public Client(Integer key) {
+    public Client(int key) {
         this.key = key;
-        this.writeRequests = new HashSet<>();
-        this.readRequests = new HashSet<>();
+        this.write_requests = new HashSet<>();
+        this.read_requests = new HashSet<>();
     }
 
-    static public Props props(Integer key) {
+    static public Props props(int key) {
         return Props.create(Client.class, () -> new Client(key));
     }
 
@@ -41,16 +42,10 @@ public class Client extends AbstractActor {
     private void OnGetRequestOrder(Message.GetRequestOrderMsg m) {
 
         Message.ReadRequestMsg req = new Message.ReadRequestMsg(getSelf(), m.key);
-        this.readRequests.add(req);
+        this.read_requests.add(req);
 
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.TimeoutMsg(getSelf(), m.key, "Read time-out", req.message_id, "read"),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
-        
+        // Timeout
+        SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Read time-out", req.message_id, "read"));
         m.node.tell(new Message.ReadRequestMsg(getSelf(), m.key, 1), getSelf());
     }
 
@@ -62,19 +57,16 @@ public class Client extends AbstractActor {
     // Receives a write response message from the coordinator
     private void OnWriteResponse(Message.WriteResponseMsg m) {
 
-        Message.WriteRequestMsg writeRequest = null;
-        //System.out.println("is writeRequests Empty: " + writeRequests.isEmpty());
-        for(Message.WriteRequestMsg w : this.writeRequests) {
-            //System.out.println("w.key: " + w.key + "; w.sender: " + w.sender + "; m.key: " + m.key + "; m.recipient: " + m.recipient);
-            System.out.println("w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
+        Message.WriteRequestMsg write_request = null;
+        for(Message.WriteRequestMsg w : this.write_requests) {
             if(w.message_id == m.message_id) {
-                writeRequest = w;
+                write_request = w;
                 break;
             }
         }
 
-        if(writeRequest != null) {
-            this.writeRequests.remove(writeRequest);
+        if(write_request != null) {
+            this.write_requests.remove(write_request);
         }
 
         System.out.println("\t\t Value " + m.value + " was written");
@@ -84,16 +76,10 @@ public class Client extends AbstractActor {
     private void OnUpdateRequestOrder(Message.UpdateRequestOrderMsg m) {
 
         Message.WriteRequestMsg req = new Message.WriteRequestMsg(getSelf(), m.key, m.value);
-        this.writeRequests.add(req);
+        this.write_requests.add(req);
 
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(200, TimeUnit.MILLISECONDS),                    // how frequently generate them
-                getSelf(),                                                       // destination actor reference
-                new Message.TimeoutMsg(getSelf(), m.key, "Write time-out", req.message_id, "write"),       // the message to send
-                getContext().system().dispatcher(),                              // system dispatcher
-                getSelf()                                                        // source of the message (myself)
-        );
-
+        // Timeout
+        SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Write time-out", req.message_id, "write"));
         m.node.tell(req, getSelf());
     }
 
@@ -108,36 +94,45 @@ public class Client extends AbstractActor {
     }
 
     private void OnTimeOut(Message.TimeoutMsg m) {
-        if(m.operation.equals("write")) {
-            Message.WriteRequestMsg writeRequest = null;
-            for(Message.WriteRequestMsg w : this.writeRequests) {
-                System.out.println("Timeout w.message_id: " + w.message_id + "; m.message_id: " + m.message_id);
-                if(w.message_id == m.message_id) {
-                    writeRequest = w;
+
+        if ("write".equals(m.operation)) {
+            Iterator<Message.WriteRequestMsg> iterator = this.write_requests.iterator();
+
+            while (iterator.hasNext()) {
+                Message.WriteRequestMsg w = iterator.next();
+
+                if (w.message_id == m.message_id) {
+                    m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
+                    iterator.remove();
                     break;
                 }
             }
+        } else if ("read".equals(m.operation)) {
+            Iterator<Message.ReadRequestMsg> iterator = this.read_requests.iterator();
 
-            if(writeRequest != null) {
-                m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
-                this.writeRequests.remove(writeRequest);
-                System.out.println(getSelf() + "Removed writeRequest in OnTimeOut");
-            }
-        } else if(m.operation.equals("read")) {
-            Message.ReadRequestMsg readRequest = null;
-            for(Message.ReadRequestMsg r: this.readRequests) {
-                System.out.println("Timeout w.message_id: " + r.message_id + "; m.message_id: " + m.message_id);
-                if(r.message_id == m.message_id) {
-                    readRequest = r;
+            while (iterator.hasNext()) {
+                Message.ReadRequestMsg r = iterator.next();
+
+                if (r.message_id == m.message_id) {
+                    m.recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
+                    iterator.remove();
                     break;
                 }
-            }
-
-            if(readRequest != null) {
-                m.recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
-                this.readRequests.remove(readRequest);
-                System.out.println(getSelf() + "Removed readRequest in OnTimeOut");
             }
         }
+    }
+
+    private void SetTimeout(Message.BaseMessage m) {
+        SetTimeout(m, 200);
+    }
+
+    private void SetTimeout(Message.BaseMessage m, int msTimer) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(msTimer, TimeUnit.MILLISECONDS),                                                       // how frequently generate them
+                getSelf(),                                                                                             // destination actor reference
+                m,                                                                                                     // the message to send
+                getContext().system().dispatcher(),                                                                    // system dispatcher
+                getSelf()                                                                                              // source of the message (myself)
+        );
     }
 }
