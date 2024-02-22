@@ -100,8 +100,8 @@ public class Main {
                     break;
 
                 case 3:
-                    if(ring.hash_table.isEmpty()) {
-                        System.out.println("\t Cannot delete any node because the network is empty");
+                    if(ring.hash_table.isEmpty() || ring.available_nodes.size() < 2) {
+                        System.out.println("\t Cannot delete any node because the network is empty or there's only one node available");
                         System.out.println();
                         break;
                     }

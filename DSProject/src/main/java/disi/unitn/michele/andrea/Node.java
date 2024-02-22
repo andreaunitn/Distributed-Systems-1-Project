@@ -191,7 +191,6 @@ public class Node extends AbstractActor {
 
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
-        // TODO: put a timeout and print error if it ends
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
         } else {
@@ -203,7 +202,6 @@ public class Node extends AbstractActor {
 
                 // Timeout
                 SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"));
-
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
             }
         }
@@ -303,9 +301,6 @@ public class Node extends AbstractActor {
     // Node receives the command to leave the network
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
 
-        //TODO trova il modo di mantenere nella rete i dati del nodo uscente quando il successivo è in crash
-        //(timeout + diamo al next disponibile, tutti i nodi che entrano di conseguenza dovranno cercare nel primo nodo next in vita)
-
         // Get neighbor key
         Integer neighborKey = FindNext();
         if(neighborKey != this.key) {
@@ -315,7 +310,7 @@ public class Node extends AbstractActor {
             node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
         }
 
-        // SetTiemout
+        // SetTimeout
         SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
     }
 
@@ -345,7 +340,6 @@ public class Node extends AbstractActor {
 
     // Node receives a write request
     private void OnWriteRequest(Message.WriteRequestMsg m) {
-        //TODO: put a timeout and print error if it ends
         ActorRef node = this.network.get(FindResponsible(m.key));
         this.writeRequests.add(m);
         // SetTimeout
@@ -610,7 +604,6 @@ public class Node extends AbstractActor {
             SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
         }
     }
-
 
     private void SetTimeout(Message.BaseMessage m) {
         SetTimeout(m, 200);
