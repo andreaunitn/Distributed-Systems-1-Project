@@ -20,6 +20,33 @@ public class Main {
         Random rand = new Random();
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
+
+        float WN;
+        float RN;
+        float T;
+        
+        while(true) {
+            System.out.print("Type the desired value for W/N: ");
+            WN = in.nextFloat();
+
+            System.out.print("Type the desired value for R/N: ");
+            RN = in.nextFloat();
+
+            System.out.print("Specify the timeout for all the operations (milliseconds): ");
+            T = in.nextFloat();
+            
+            // Check conditions for w and r
+            if(WN > 0 && RN > 0 && WN + RN > 1 && WN > 0.5 && T > 0) {
+                break;
+            }
+            else {
+                System.out.println("Invalid values:");
+                System.out.println("  1) W/N + R/N must be > 1");
+                System.out.println("  2) W/N must be > 0.5");
+                System.out.println("  3) T must be positive");
+            }
+        }
+        
         System.out.println("Network Initialized");
 
         boolean exit = false;

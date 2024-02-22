@@ -12,7 +12,7 @@ public class Client extends AbstractActor {
 
     private final int key;
     private final HashSet<Message.WriteRequestMsg> write_requests;
-    private final HashSet<Message.ReadRequestMsg> read_requests;
+    private final HashSet<Integer> read_requests;
 
     public Client(int key) {
         this.key = key;
@@ -42,16 +42,17 @@ public class Client extends AbstractActor {
     private void OnGetRequestOrder(Message.GetRequestOrderMsg m) {
 
         Message.ReadRequestMsg req = new Message.ReadRequestMsg(getSelf(), m.key);
-        this.read_requests.add(req);
+        this.read_requests.add(req.message_id);
 
         // Timeout
         SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Read time-out", req.message_id, "read"));
-        m.node.tell(new Message.ReadRequestMsg(getSelf(), m.key, 1), getSelf());
+        m.node.tell(req, getSelf());
     }
 
     // When receives the response for a read print data item
     private void OnReadResponse(Message.ReadResponseMsg m) {
         System.out.println("\t\t Client " + this.key + " received value " + m.value.GetValue() + " for key " + m.key);
+        this.read_requests.remove(m.message_id);
     }
 
     // Receives a write response message from the coordinator
@@ -108,16 +109,11 @@ public class Client extends AbstractActor {
                 }
             }
         } else if ("read".equals(m.operation)) {
-            Iterator<Message.ReadRequestMsg> iterator = this.read_requests.iterator();
 
-            while (iterator.hasNext()) {
-                Message.ReadRequestMsg r = iterator.next();
-
-                if (r.message_id == m.message_id) {
-                    m.recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
-                    iterator.remove();
-                    break;
-                }
+            // if read request han not been satisfied, error is thrown
+            if(this.read_requests.contains(m.message_id)) {
+                getSelf().tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
+                this.read_requests.remove(m.message_id);
             }
         }
     }
