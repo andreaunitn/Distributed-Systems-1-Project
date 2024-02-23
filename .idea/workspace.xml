@@ -6,11 +6,7 @@
   <component name="ChangeListManager">
     <list default="true" id="9523280f-6d05-484f-8f4c-7ecdd90564b8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Message.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Message.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
-    </list>
-    <list id="fb04bc5e-e560-4b8f-ad0a-3531d58ece14" name="Changes by andreatomasoni" comment="">
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Client.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
@@ -38,20 +34,6 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="LineStatusTrackerManager">
-    <file path="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java">
-      <ranges>
-        <range start1="19" end1="19" start2="19" end2="20" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="70" end1="70" start2="71" end2="73" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="298" end1="301" start2="301" end2="301" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="304" end1="304" start2="304" end2="313" changelist="fb04bc5e-e560-4b8f-ad0a-3531d58ece14" />
-        <range start1="305" end1="313" start2="314" end2="321" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="318" end1="318" start2="326" end2="327" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="319" end1="319" start2="328" end2="334" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="579" end1="579" start2="594" end2="619" changelist="fb04bc5e-e560-4b8f-ad0a-3531d58ece14" />
-      </ranges>
-    </file>
-  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -63,22 +45,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Build DSProject.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.DSProject [:Main.main()].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;main&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/michelelamon/Documents/UNITN/Distributed Systems 1/Distributed-Systems-1-Project&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Main.executor": "Run",
+    "Gradle.Build DSProject.executor": "Run",
+    "Gradle.DSProject [:Main.main()].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "review",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/michelelamon/Documents/UNITN/Distributed Systems 1/Distributed-Systems-1-Project",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "reference.settingsdialog.project.gradle"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

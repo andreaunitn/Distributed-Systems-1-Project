@@ -26,8 +26,8 @@ public class Client extends AbstractActor {
         return Props.create(Client.class, () -> new Client(key, T));
     }
 
-    /*
-    @Override
+
+    /*@Override
     public Receive createReceive() {
         return receiveBuilder()
                 // Join
@@ -49,10 +49,11 @@ public class Client extends AbstractActor {
                 .match(Message.ErrorMsg.class, this::OnError)
 
                 .build();
-    }
-    */
+    }*/
+
 
     /***** Dispatcher *****/
+    @Override
     public Receive createReceive() {
         return receiveBuilder()
 

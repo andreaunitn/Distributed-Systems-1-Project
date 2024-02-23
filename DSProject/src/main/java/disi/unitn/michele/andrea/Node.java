@@ -11,6 +11,15 @@ import java.util.concurrent.TimeUnit;
 
 public class Node extends AbstractActor {
 
+    private class Identifier {
+        Integer id;
+        ActorRef ref;
+        Identifier(Integer id, ActorRef ref) {
+            this.id = id;
+            this.ref = ref;
+        }
+    }
+
     private final Random rnd;
     private final Integer key;
     private boolean isCrashed = false;
@@ -18,13 +27,14 @@ public class Node extends AbstractActor {
     private boolean isRecovering = false;
     private int valuesToCheck = 0;
     private boolean canDie = false;
+    private int counter = 0; // counter to be used for message ids. Gets increased at every use
 
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
     private HashSet<Message.WriteRequestMsg> writeRequests;
 
     // contains the association between the request id and the originating client
-    private HashMap<Integer, ActorRef> readRequests;
+    private HashMap<Integer, Identifier> readRequests;
     private HashSet<Message.DataRequestMsg> dataRequests;
 
     public Node(Integer key) {
@@ -74,6 +84,8 @@ public class Node extends AbstractActor {
                 .match(Message.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
                 .match(Message.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
                 .match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
+                // New
+                .match(MessageClient.GetRequestMsg.class, this::OnGetRequest)
                 .build();
     }
 
@@ -194,32 +206,23 @@ public class Node extends AbstractActor {
 
 
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
-    private void OnGetRequest(MessageClient.GetRequestMsg m) { /*
+    private void OnGetRequest(MessageClient.GetRequestMsg m) {
         ActorRef holdingNode = this.network.get(FindResponsible(m.key));
-        this.readRequests.put(m.message_id, getSender());
+        this.readRequests.put(counter, new Identifier(counter, getSender())); //TODO forse meglio chiamarla readRequests
+
         // Timeout
-        SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"));
-        holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
-        */
+        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Read time-out", counter, "read"));
+        holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
+        counter += 1;
     }
 
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
-        /*
         if(this.storage.containsKey(m.key)) {
-            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
+            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ?
         } else {
-            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
-            if(holdingNode == getSelf()) {
-                m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null, m.message_id), getSelf());
-            } else {
-                this.readRequests.put(m.message_id, getSender());
-                // Timeout
-                SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"));
-                holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
-            }
+            m.sender.tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null, m.message_id), getSelf());
         }
-        */
     }
 
     // Node performs write operation
@@ -300,13 +303,13 @@ public class Node extends AbstractActor {
             // we're forwarding the message and deleting the read request from the relative map
 
             // deleting read request from map
-            ActorRef recipient = this.readRequests.get(m.message_id);
-            System.out.println("OnReadResponse - id: " + m.message_id);
+            Identifier identity = this.readRequests.get(m.message_id);
+            ActorRef recipient = identity.ref;
             if(recipient != null) {
                 this.readRequests.remove(m.message_id);
 
                 // Forward response
-                recipient.tell(m, getSelf());
+                recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, m.value, identity.id), getSelf());
             }
             else {
                 System.err.println("I got a readResponse of whom I'm not the recipient but no one requested it");
@@ -454,8 +457,8 @@ public class Node extends AbstractActor {
         } else if(m.operation.equals("read")) {
 
             // read operation failed and we're removing it from the map and reporting the problem to client
-            ActorRef recipient = this.readRequests.get(m.message_id);
-            System.out.println("OnTimeOut - id: " + m.message_id);
+            Identifier identity = this.readRequests.get(m.message_id);
+            ActorRef recipient = identity.ref;
             if(recipient != null) {
                 this.readRequests.remove(m.message_id);
                 recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
