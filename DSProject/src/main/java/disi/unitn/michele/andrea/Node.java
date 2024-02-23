@@ -192,8 +192,20 @@ public class Node extends AbstractActor {
         }
     }
 
+
+    // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
+    private void OnGetRequest(MessageClient.GetRequestMsg m) { /*
+        ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+        this.readRequests.put(m.message_id, getSender());
+        // Timeout
+        SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Read time-out", m.message_id, "read"));
+        holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
+        */
+    }
+
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
+        /*
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
         } else {
@@ -207,6 +219,7 @@ public class Node extends AbstractActor {
                 holdingNode.tell(new Message.ReadRequestMsg(m.sender, m.key, m.message_id), getSelf());
             }
         }
+        */
     }
 
     // Node performs write operation
@@ -230,7 +243,7 @@ public class Node extends AbstractActor {
                 data.SetValue(writeRequest.value, false);
             }
 
-            writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
+            writeRequest.sender.tell(new MessageClient.UpdateResponseMsg(writeRequest.value, m.message_id), getSelf());
             getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
             this.writeRequests.remove(writeRequest);
         } else {
@@ -273,7 +286,7 @@ public class Node extends AbstractActor {
                 if(writeRequest != null) {
                     m.value.SetValue(writeRequest.value, true);
                     getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
-                    writeRequest.sender.tell(new Message.WriteResponseMsg(writeRequest.value, m.message_id), getSelf());
+                    writeRequest.sender.tell(new MessageClient.UpdateResponseMsg(writeRequest.value, m.message_id), getSelf());
                     this.writeRequests.remove(writeRequest);
                 }
 
@@ -435,7 +448,7 @@ public class Node extends AbstractActor {
             }
 
             if(writeRequest != null) {
-                m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
+                m.recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
                 this.writeRequests.remove(writeRequest);
             }
         } else if(m.operation.equals("read")) {
@@ -445,7 +458,7 @@ public class Node extends AbstractActor {
             System.out.println("OnTimeOut - id: " + m.message_id);
             if(recipient != null) {
                 this.readRequests.remove(m.message_id);
-                recipient.tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
+                recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
             }
         }
     }

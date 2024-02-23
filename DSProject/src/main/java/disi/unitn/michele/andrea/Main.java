@@ -23,7 +23,7 @@ public class Main {
 
         float WN;
         float RN;
-        float T;
+        int T;
         
         while(true) {
             System.out.print("Type the desired value for W/N: ");
@@ -33,7 +33,7 @@ public class Main {
             RN = in.nextFloat();
 
             System.out.print("Specify the timeout for all the operations (milliseconds): ");
-            T = in.nextFloat();
+            T = in.nextInt();
             
             // Check conditions for w and r
             if(WN > 0 && RN > 0 && WN + RN > 1 && WN > 0.5 && T > 0) {
@@ -77,11 +77,11 @@ public class Main {
                     }
 
                     for(int i = 0; i < num_clients; i++) {
-                        clients.put(client_id, system.actorOf(Client.props(client_id), "Client" + client_id));
+                        clients.put(client_id, system.actorOf(Client.props(client_id, T), "Client" + client_id));
+                        clients.get(client_id).tell(new MessageClient.JoinSystemMsg(), ActorRef.noSender());
                         client_id++;
                     }
 
-                    System.out.println("\t Client successfully created\n");
                     break;
 
                 case 2:
@@ -173,7 +173,7 @@ public class Main {
                     List<Integer> keys_array = new ArrayList<>(ring.hash_table.keySet());
                     ActorRef n = ring.hash_table.get(keys_array.get(rand.nextInt(keys_array.size())));
                     ActorRef c = clients.get(client_key);
-                    c.tell(new Message.GetRequestOrderMsg(n, key), ActorRef.noSender());
+                    c.tell(new MessageClient.GetRequestMsg(n, key), ActorRef.noSender());
 
                     TimeUnit.MILLISECONDS.sleep(400);
                     System.out.println();
@@ -207,7 +207,7 @@ public class Main {
                     List<ActorRef> keys_Array = new ArrayList<>(ring.available_nodes);
                     ActorRef Node = keys_Array.get(rand.nextInt(keys_Array.size()));
                     ActorRef Client = clients.get(c_key);
-                    Client.tell(new Message.UpdateRequestOrderMsg(Node, Key, value), ActorRef.noSender());
+                    Client.tell(new MessageClient.UpdateRequestMsg(Node, Key, value), ActorRef.noSender());
 
                     TimeUnit.MILLISECONDS.sleep(500);
                     System.out.println();
@@ -277,7 +277,7 @@ public class Main {
                     System.out.println("Clients:");
 
                     clients.forEach((i, client) -> {
-                        client.tell(new Message.PrintClient(), ActorRef.noSender());
+                        client.tell(new MessageClient.PrintSelfMsg(), ActorRef.noSender());
 
                         try {
                             TimeUnit.MILLISECONDS.sleep(100);

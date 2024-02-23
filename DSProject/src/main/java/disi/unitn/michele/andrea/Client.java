@@ -6,37 +6,191 @@ import akka.actor.Props;
 
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
-import java.util.Iterator;
 
 public class Client extends AbstractActor {
 
     private final int key;
-    private final HashSet<Message.WriteRequestMsg> write_requests;
+    private final HashSet<Integer> write_requests;
     private final HashSet<Integer> read_requests;
+    private final int T; // timeout in ms
 
-    public Client(int key) {
+    /***** Constructor *****/
+    public Client(int key, int T) {
         this.key = key;
         this.write_requests = new HashSet<>();
         this.read_requests = new HashSet<>();
+        this.T = T;
     }
 
-    static public Props props(int key) {
-        return Props.create(Client.class, () -> new Client(key));
+    static public Props props(int key, int T) {
+        return Props.create(Client.class, () -> new Client(key, T));
     }
 
-    // Dispatcher
+    /*
     @Override
     public Receive createReceive() {
         return receiveBuilder()
+                // Join
+                .match(MessageClient.JoinSystemMsg.class, this::OnJoinSystem)
+
+                // Requests
                 .match(Message.GetRequestOrderMsg.class, this::OnGetRequestOrder)
-                .match(Message.PrintClient.class, this::OnPrintClient)
-                .match(Message.ReadResponseMsg.class, this::OnReadResponse)
                 .match(Message.UpdateRequestOrderMsg.class, this::OnUpdateRequestOrder)
-                .match(Message.ErrorMsg.class, this::OnError)
+
+                // Responses
+                .match(Message.ReadResponseMsg.class, this::OnReadResponse)
                 .match(Message.WriteResponseMsg.class, this::OnWriteResponse)
+
+                // Timeout
                 .match(Message.TimeoutMsg.class, this::OnTimeOut)
+
+                // Log
+                .match(Message.PrintClient.class, this::OnPrintClient)
+                .match(Message.ErrorMsg.class, this::OnError)
+
                 .build();
     }
+    */
+
+    /***** Dispatcher *****/
+    public Receive createReceive() {
+        return receiveBuilder()
+
+                // Join
+                .match(MessageClient.JoinSystemMsg.class, this::OnJoinSystem)
+
+                // Requests
+                .match(MessageClient.GetRequestMsg.class, this::OnGetRequest)
+                .match(MessageClient.UpdateRequestMsg.class, this::OnUpdateRequest)
+
+                // Responses
+                .match(MessageClient.GetResponseMsg.class, this::OnGetResponse)
+                .match(MessageClient.UpdateResponseMsg.class, this::OnUpdateResponse)
+
+                // Timeout
+                .match(MessageClient.GetTimeoutMsg.class, this::OnGetTimeout)
+                .match(MessageClient.UpdateTimeoutMsg.class,this::OnUpdateTimeout)
+
+                // Log
+                .match(MessageClient.PrintSelfMsg.class, this::OnPrintSelf)
+                .match(MessageClient.PrintErrorMsg.class, this::OnPrintError)
+
+                .build();
+    }
+
+    /***** Actor methods *****/
+    ////////////////////
+    // Join
+    private void OnJoinSystem(MessageClient.JoinSystemMsg m) {
+        log("joined the system");
+    }
+
+    ////////////////////
+    // Requests
+    private void OnGetRequest(MessageClient.GetRequestMsg m) {
+
+        // Creating new read request for the coordinator node
+        Message.ReadRequestMsg req = new Message.ReadRequestMsg(getSelf(), m.key);
+        this.read_requests.add(req.message_id);
+
+        // Timeout
+        SetTimeout(new MessageClient.GetTimeoutMsg(getSelf(), m.key, "Read timeout", req.message_id));
+        m.node_coordinator.tell(req, getSelf());
+    }
+
+    private void OnUpdateRequest(MessageClient.UpdateRequestMsg m) {
+
+        // Creating a new write request for the coordinator node
+        Message.WriteRequestMsg req = new Message.WriteRequestMsg(getSelf(), m.key, m.value);
+        this.write_requests.add(req.message_id);
+
+        // Timeout
+        SetTimeout(new MessageClient.UpdateTimeoutMsg(getSelf(), m.key, "Write timeout", req.message_id));
+        m.node_coordinator.tell(req, getSelf());
+    }
+
+    ////////////////////
+    // Responses
+
+    private void OnGetResponse(MessageClient.GetResponseMsg m) {
+        log("received " + "(" + m.key + ", " + m.entry.GetValue() + ", ver: " + m.entry.GetVersion() + ")");
+
+        // Remove read request because is completed
+        this.read_requests.remove(m.msg_id);
+    }
+
+    private void OnUpdateResponse(MessageClient.UpdateResponseMsg m) {
+        log(m.value + " written");
+
+        // Remove write request because is completed
+        this.write_requests.remove(m.msg_id);
+    }
+
+    ////////////////////
+    // Timeouts
+
+    private void OnGetTimeout(MessageClient.GetTimeoutMsg m) {
+
+        // Read request not completed
+        if(this.read_requests.contains(m.msg_id)) {
+            getSelf().tell(new MessageClient.PrintErrorMsg("cannot read value for key: " + m.key), getSelf());
+            this.read_requests.remove(m.msg_id);
+        }
+    }
+
+    private void OnUpdateTimeout(MessageClient.UpdateTimeoutMsg m) {
+
+        // Write request not completed
+        if (this.write_requests.contains(m.msg_id)) {
+            getSelf().tell(new MessageClient.PrintErrorMsg("cannot write value for key: " + m.key), getSelf());
+            this.write_requests.remove(m.msg_id);
+        }
+    }
+
+    ////////////////////
+    // Log
+    private void OnPrintSelf(MessageClient.PrintSelfMsg m) {
+        log("");
+    }
+
+    private void OnPrintError(MessageClient.PrintErrorMsg m) {
+        log_error(m.msg);
+    }
+
+    /***** Additional functions *****/
+    private void log(String m) {
+        System.out.println("[Client " + this.key + "] " + m);
+    }
+
+    private void log_error(String m) {
+        System.err.println("[Client " + this.key + "] " + m);
+    }
+
+    private void SetTimeout(MessageClient.BaseTimeout m) {
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(this.T, TimeUnit.MILLISECONDS), // how frequently generate them
+                getSelf(),                                       // destination actor reference
+                m,                                               // the message to send
+                getContext().system().dispatcher(),              // system dispatcher
+                getSelf()                                        // source of the message (myself)
+        );
+    }
+
+    /**********/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
     // Client receives a get request from main
     private void OnGetRequestOrder(Message.GetRequestOrderMsg m) {
@@ -56,7 +210,7 @@ public class Client extends AbstractActor {
     }
 
     // Receives a write response message from the coordinator
-    private void OnWriteResponse(Message.WriteResponseMsg m) {
+    /*private void OnWriteResponse(Message.WriteResponseMsg m) {
 
         Message.WriteRequestMsg write_request = null;
         for(Message.WriteRequestMsg w : this.write_requests) {
@@ -71,13 +225,13 @@ public class Client extends AbstractActor {
         }
 
         System.out.println("\t\t Value " + m.value + " was written");
-    }
+    }*/
 
     // Client receives an update request from main
     private void OnUpdateRequestOrder(Message.UpdateRequestOrderMsg m) {
 
         Message.WriteRequestMsg req = new Message.WriteRequestMsg(getSelf(), m.key, m.value);
-        this.write_requests.add(req);
+        this.write_requests.add(req.message_id);
 
         // Timeout
         SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Write time-out", req.message_id, "write"));
@@ -97,17 +251,12 @@ public class Client extends AbstractActor {
     private void OnTimeOut(Message.TimeoutMsg m) {
 
         if ("write".equals(m.operation)) {
-            Iterator<Message.WriteRequestMsg> iterator = this.write_requests.iterator();
 
-            while (iterator.hasNext()) {
-                Message.WriteRequestMsg w = iterator.next();
-
-                if (w.message_id == m.message_id) {
-                    m.recipient.tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
-                    iterator.remove();
-                    break;
-                }
+            if (this.write_requests.contains(m.message_id)) {
+                getSelf().tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
+                this.write_requests.remove(m.message_id);
             }
+
         } else if ("read".equals(m.operation)) {
 
             // if read request han not been satisfied, error is thrown
@@ -119,16 +268,12 @@ public class Client extends AbstractActor {
     }
 
     private void SetTimeout(Message.BaseMessage m) {
-        SetTimeout(m, 200);
-    }
-
-    private void SetTimeout(Message.BaseMessage m, int msTimer) {
         getContext().system().scheduler().scheduleOnce(
-                Duration.create(msTimer, TimeUnit.MILLISECONDS),                                                       // how frequently generate them
-                getSelf(),                                                                                             // destination actor reference
-                m,                                                                                                     // the message to send
-                getContext().system().dispatcher(),                                                                    // system dispatcher
-                getSelf()                                                                                              // source of the message (myself)
+                Duration.create(T, TimeUnit.MILLISECONDS), // how frequently generate them
+                getSelf(),                                       // destination actor reference
+                m,                                               // the message to send
+                getContext().system().dispatcher(),              // system dispatcher
+                getSelf()                                        // source of the message (myself)
         );
     }
 }
