@@ -260,13 +260,11 @@ public class Message {
     }
 
     public static class NeighborTimeoutMsg extends BaseMessage implements Serializable {
-        public final ActorRef sender;
         public final ActorRef recipient;
         public final Integer key;
         public final int message_id;
 
-        public NeighborTimeoutMsg(ActorRef sender, ActorRef recipient, Integer key, int message_id) {
-            this.sender = sender;
+        public NeighborTimeoutMsg(ActorRef recipient, Integer key, int message_id) {
             this.recipient = recipient;
             this.key = key;
             this.message_id = message_id;

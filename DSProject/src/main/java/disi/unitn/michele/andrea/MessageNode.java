@@ -1,7 +1,5 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.ActorRef;
-
 import java.io.Serializable;
 
 /***** Messages received by a Node coming from the Main or Client *****/
@@ -31,4 +29,7 @@ public class MessageNode {
         }
     }
 
+    ////////////////////
+    // Utility
+    public static class NetworkRequestMsg implements Serializable {}
 }
