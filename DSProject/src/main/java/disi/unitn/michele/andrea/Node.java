@@ -13,10 +13,10 @@ public class Node extends AbstractActor {
 
     private class Identifier {
         Integer id;
-        ActorRef ref;
-        Identifier(Integer id, ActorRef ref) {
+        ActorRef client;
+        Identifier(Integer id, ActorRef client) {
             this.id = id;
-            this.ref = ref;
+            this.client = client;
         }
     }
 
@@ -31,10 +31,13 @@ public class Node extends AbstractActor {
 
     private HashMap<Integer, ActorRef> network;
     private HashMap<Integer, DataEntry> storage;
-    private HashSet<Message.WriteRequestMsg> writeRequests;
+    private HashMap<Integer, Identifier> write_requests;
+
+    // contains the association between the message id and the value to be updated
+    private HashMap<Integer, String> update_values;
 
     // contains the association between the request id and the originating client
-    private HashMap<Integer, Identifier> readRequests;
+    private HashMap<Integer, Identifier> read_requests;
     private HashSet<Message.DataRequestMsg> dataRequests;
 
     public Node(Integer key) {
@@ -43,8 +46,8 @@ public class Node extends AbstractActor {
         this.storage = new HashMap<>();
         this.network = new HashMap<>();
         this.network.put(key, getSelf());
-        this.writeRequests = new HashSet<>();
-        this.readRequests = new HashMap<>();
+        this.write_requests = new HashMap<>();
+        this.read_requests = new HashMap<>();
         this.dataRequests = new HashSet<>();
     }
 
@@ -73,7 +76,7 @@ public class Node extends AbstractActor {
                 .match(Message.LeaveNetworkOrder.class, this::OnLeaveOrder)
                 .match(Message.NodeLeaveMsg.class, this::OnNodeLeave)
                 .match(Message.PassDataItemsMsg.class, this::OnPassDataItems)
-                .match(Message.WriteRequestMsg.class, this::OnWriteRequest)
+                //.match(Message.WriteRequestMsg.class, this::OnWriteRequest)
                 .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
                 .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
                 .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
@@ -84,8 +87,10 @@ public class Node extends AbstractActor {
                 .match(Message.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
                 .match(Message.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
                 .match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
+
                 // New
-                .match(MessageClient.GetRequestMsg.class, this::OnGetRequest)
+                .match(MessageNode.GetRequestMsg.class, this::OnGetRequest)
+                .match(MessageNode.UpdateRequestMsg.class, this::OnUpdateRequest)
                 .build();
     }
 
@@ -206,13 +211,13 @@ public class Node extends AbstractActor {
 
 
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
-    private void OnGetRequest(MessageClient.GetRequestMsg m) {
+    private void OnGetRequest(MessageNode.GetRequestMsg m) {
         ActorRef holdingNode = this.network.get(FindResponsible(m.key));
-        this.readRequests.put(counter, new Identifier(counter, getSender())); //TODO forse meglio chiamarla readRequests
+        this.read_requests.put(counter, new Identifier(m.msg_id, getSender())); //TODO forse meglio chiamarla readRequests
 
         // Timeout
         SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Read time-out", counter, "read"));
-        holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
+        holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
         counter += 1;
     }
 
@@ -228,30 +233,21 @@ public class Node extends AbstractActor {
     // Node performs write operation
     private void OnNoValueFound(Message.ErrorNoValueFound m) {
 
-        Message.WriteRequestMsg writeRequest = null;
-        for(Message.WriteRequestMsg w : this.writeRequests) {
-            if(w.key == m.key && getSelf() == m.readSender) {
-                writeRequest = w;
-                break;
-            }
-        }
+        Identifier identity = this.write_requests.get(m.message_id);
+        ActorRef recipient = identity.client;
+        String newValue = this.update_values.get(m.message_id);
 
-        if(writeRequest != null) {
-            DataEntry data;
+        DataEntry data = new DataEntry(newValue);
 
-            if(m.data == null) {
-                data = new DataEntry(writeRequest.value);
-            } else {
-                data = m.data;
-                data.SetValue(writeRequest.value, false);
-            }
+        recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+        getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
 
-            writeRequest.sender.tell(new MessageClient.UpdateResponseMsg(writeRequest.value, m.message_id), getSelf());
-            getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
-            this.writeRequests.remove(writeRequest);
-        } else {
-            System.out.println("I've sent a read request for a non existing value and I don't know why");
-        }
+        // removing request because is completed
+        this.write_requests.remove(m.message_id);
+
+        // removing value because the update is completed
+        this.update_values.remove(m.message_id);
+
     }
 
     // Put the received data in the storage
@@ -278,35 +274,35 @@ public class Node extends AbstractActor {
                 }
             } else { // Node is ready to write
 
-                Message.WriteRequestMsg writeRequest = null;
-                for(Message.WriteRequestMsg w : this.writeRequests) {
-                    if(w.message_id == m.message_id) {
-                        writeRequest = w;
-                        break;
-                    }
-                }
+                // this node is the recipient
+                // we're deleting the write request from the relative map
 
-                if(writeRequest != null) {
-                    m.value.SetValue(writeRequest.value, true);
-                    getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
-                    writeRequest.sender.tell(new MessageClient.UpdateResponseMsg(writeRequest.value, m.message_id), getSelf());
-                    this.writeRequests.remove(writeRequest);
-                }
+                // deleting write request from map
+                Identifier identity = this.write_requests.get(m.message_id);
+                ActorRef recipient = identity.client;
+                String newValue = this.update_values.get(m.message_id);
 
-                //OnNoValueFound(new Message.ErrorNoValueFound("No value found for the requested key", getSelf(), m.key, m.value));
-                //DataEntry data = m.value.SetValue();
-                //InsertData(m.key, m.value);
-                //TODO controlla che versione dato da inserire sia maggiore
+                m.value.SetValue(newValue, true);
+                getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
+                recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+
+                // removing request because is completed
+                this.write_requests.remove(m.message_id);
+
+                // removing value because the update is completed
+                this.update_values.remove(m.message_id);
+
+                // TODO controlla che versione dato da inserire sia maggiore (per la replication)
             }
         } else {
             // this node isn't the recipient but the client is
             // we're forwarding the message and deleting the read request from the relative map
 
             // deleting read request from map
-            Identifier identity = this.readRequests.get(m.message_id);
-            ActorRef recipient = identity.ref;
+            Identifier identity = this.read_requests.get(m.message_id);
+            ActorRef recipient = identity.client;
             if(recipient != null) {
-                this.readRequests.remove(m.message_id);
+                this.read_requests.remove(m.message_id);
 
                 // Forward response
                 recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, m.value, identity.id), getSelf());
@@ -358,14 +354,17 @@ public class Node extends AbstractActor {
     }
 
     // Node receives a write request
-    private void OnWriteRequest(Message.WriteRequestMsg m) {
+    private void OnUpdateRequest(MessageNode.UpdateRequestMsg m) {
         ActorRef node = this.network.get(FindResponsible(m.key));
-        this.writeRequests.add(m);
+        Identifier identifier = new Identifier(m.msg_id, getSender());
+        this.write_requests.put(counter, identifier);
+        this.update_values.put(counter, m.value);
 
         // SetTimeout
-        SetTimeout(new Message.TimeoutMsg(m.sender, m.key, "Write time-out", m.message_id, "write"));
+        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Write time-out", counter, "write"));
+        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, counter), getSelf());
 
-        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, m.message_id), getSelf());
+        counter += 1;
     }
 
     // Node receives the order to crash
@@ -442,25 +441,21 @@ public class Node extends AbstractActor {
     // Node timeout
     private void OnTimeOut(Message.TimeoutMsg m) {
         if(m.operation.equals("write")) {
-            Message.WriteRequestMsg writeRequest = null;
-            for(Message.WriteRequestMsg w : this.writeRequests) {
-                if(w.message_id == m.message_id) {
-                    writeRequest = w;
-                    break;
-                }
-            }
 
-            if(writeRequest != null) {
-                m.recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
-                this.writeRequests.remove(writeRequest);
+            // write operation failed and we're removing it from the map and reporting the problem to client
+            Identifier identity = this.write_requests.get(m.message_id);
+            if(identity != null) {
+                ActorRef recipient = identity.client;
+                this.write_requests.remove(m.message_id);
+                recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
             }
         } else if(m.operation.equals("read")) {
 
             // read operation failed and we're removing it from the map and reporting the problem to client
-            Identifier identity = this.readRequests.get(m.message_id);
-            ActorRef recipient = identity.ref;
-            if(recipient != null) {
-                this.readRequests.remove(m.message_id);
+            Identifier identity = this.read_requests.get(m.message_id);
+            if(identity != null) {
+                ActorRef recipient = identity.client;
+                this.read_requests.remove(m.message_id);
                 recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
             }
         }

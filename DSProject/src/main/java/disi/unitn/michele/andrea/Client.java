@@ -13,6 +13,8 @@ public class Client extends AbstractActor {
     private final HashSet<Integer> write_requests;
     private final HashSet<Integer> read_requests;
     private final int T; // timeout in ms
+    private int counter = 0; // counter to be used for message ids. Gets increased at every use
+
 
     /***** Constructor *****/
     public Client(int key, int T) {
@@ -91,23 +93,27 @@ public class Client extends AbstractActor {
     private void OnGetRequest(MessageClient.GetRequestMsg m) {
 
         // Creating new read request for the coordinator node
-        Message.ReadRequestMsg req = new Message.ReadRequestMsg(getSelf(), m.key);
-        this.read_requests.add(req.message_id);
+        MessageNode.GetRequestMsg req = new MessageNode.GetRequestMsg(m.key, counter);
+        this.read_requests.add(counter);
 
         // Timeout
-        SetTimeout(new MessageClient.GetTimeoutMsg(getSelf(), m.key, "Read timeout", req.message_id));
+        SetTimeout(new MessageClient.GetTimeoutMsg(getSelf(), m.key, "Read timeout", counter));
         m.node_coordinator.tell(req, getSelf());
+
+        counter += 1;
     }
 
     private void OnUpdateRequest(MessageClient.UpdateRequestMsg m) {
 
         // Creating a new write request for the coordinator node
-        Message.WriteRequestMsg req = new Message.WriteRequestMsg(getSelf(), m.key, m.value);
-        this.write_requests.add(req.message_id);
+        MessageNode.UpdateRequestMsg req = new MessageNode.UpdateRequestMsg(m.key, m.value, counter); //ex write
+        this.write_requests.add(counter);
 
         // Timeout
-        SetTimeout(new MessageClient.UpdateTimeoutMsg(getSelf(), m.key, "Write timeout", req.message_id));
+        SetTimeout(new MessageClient.UpdateTimeoutMsg(getSelf(), m.key, "Write timeout", counter));
         m.node_coordinator.tell(req, getSelf());
+
+        counter += 1;
     }
 
     ////////////////////
