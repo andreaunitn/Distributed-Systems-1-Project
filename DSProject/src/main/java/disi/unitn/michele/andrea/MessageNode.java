@@ -29,6 +29,14 @@ public class MessageNode {
         }
     }
 
+    public static class DataRequestMsg implements Serializable {
+        public final int msg_id;
+
+        public DataRequestMsg(int msg_id) {
+            this.msg_id = msg_id;
+        }
+    }
+
     ////////////////////
     // Utility
     public static class NetworkRequestMsg implements Serializable {}

@@ -56,7 +56,7 @@ public class Message {
         }
     }
 
-    public static class DataRequestMsg implements Serializable {
+    /*public static class DataRequestMsg implements Serializable {
         public final ActorRef sender;
         public final int message_id;
 
@@ -67,7 +67,7 @@ public class Message {
             Date date = new Date();
             this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
         }
-    }
+    }*/
 
     public static class DataResponseMsg implements Serializable {
         public final Map<Integer, DataEntry> storage;

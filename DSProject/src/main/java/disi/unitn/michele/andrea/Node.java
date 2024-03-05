@@ -27,18 +27,27 @@ public class Node extends AbstractActor {
     private boolean isRecovering = false;
     private int valuesToCheck = 0;
     private boolean canDie = false;
-    private int counter = 0; // counter to be used for message ids. Gets increased at every use
 
+    // counter to be used for message ids. Gets increased at every use
+    private int counter = 0;
+
+    // Network view
     private HashMap<Integer, ActorRef> network;
+
+    // Data contained
     private HashMap<Integer, DataEntry> storage;
+    
+    // contains the associations between the message id and the originating client for the write requests
     private HashMap<Integer, Identifier> write_requests;
+
+    // contains the association between the request id and the originating client for the read requests
+    private HashMap<Integer, Identifier> read_requests;
 
     // contains the association between the message id and the value to be updated
     private HashMap<Integer, String> update_values;
-
-    // contains the association between the request id and the originating client
-    private HashMap<Integer, Identifier> read_requests;
-    private HashSet<Message.DataRequestMsg> dataRequests;
+    
+    // contains the ids of sent data requests of which I still haven't received an answer
+    private HashSet<Integer> data_requests;
 
     public Node(Integer key) {
         this.key = key;
@@ -48,7 +57,7 @@ public class Node extends AbstractActor {
         this.network.put(key, getSelf());
         this.write_requests = new HashMap<>();
         this.read_requests = new HashMap<>();
-        this.dataRequests = new HashSet<>();
+        this.data_requests = new HashSet<>();
         this.update_values = new HashMap<>();
     }
 
@@ -66,7 +75,6 @@ public class Node extends AbstractActor {
     private AbstractActor.Receive onlineBehavior() {
         return receiveBuilder()
                 .match(Message.JoinNetworkOrder.class, this::OnJoinOrder)
-                .match(Message.DataRequestMsg.class, this::OnDataRequest)
                 .match(Message.DataResponseMsg.class, this::OnDataResponse)
                 .match(Message.PrintNode.class, this::OnPrintNode)
                 .match(Message.NodeAnnounceMsg.class, this::OnNodeAnnounce)
@@ -90,6 +98,7 @@ public class Node extends AbstractActor {
                 .match(MessageNode.GetRequestMsg.class, this::OnGetRequest)
                 .match(MessageNode.UpdateRequestMsg.class, this::OnUpdateRequest)
                 .match(MessageNode.NetworkRequestMsg.class, this::OnNetworkRequest)
+                .match(MessageNode.DataRequestMsg.class, this::OnDataRequest)
 
                 .build();
     }
@@ -111,12 +120,14 @@ public class Node extends AbstractActor {
     }
 
     // Send storage to the new node
-    private void OnDataRequest(Message.DataRequestMsg m) {
-        m.sender.tell(new Message.DataResponseMsg(this.storage, this.key, m.message_id), getSelf());
+    private void OnDataRequest(MessageNode.DataRequestMsg m) {
+        getSender().tell(new Message.DataResponseMsg(this.storage, this.key, m.msg_id), getSelf());
     }
 
     // Node receives the data storage from the neighbor
     private void OnDataResponse(Message.DataResponseMsg m) {
+
+        // TODO move this at the sending point
         // Take only necessary data
         Map<Integer, DataEntry> s = m.storage;
 
@@ -133,36 +144,24 @@ public class Node extends AbstractActor {
             }
         }
 
+        // Joining Phase
         if(this.isJoining) {
-            Message.DataRequestMsg dataRequest = null;
-            for(Message.DataRequestMsg d: this.dataRequests) {
-                if(d.message_id == m.message_id) {
-                    dataRequest = d;
-                    break;
-                }
-            }
 
-            if(dataRequest != null) {
-                this.dataRequests.remove(dataRequest);
+            // Request removed because is completed
+            this.data_requests.remove(m.message_id);
+
+            // The node has sent an empty storage and can join the network
+            if(this.valuesToCheck == 0) {
+                Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+                this.isJoining = false;
             }
         }
 
-        if(this.valuesToCheck == 0) {
-            Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
-            this.isJoining = false;
-        }
-
+        // Recovering phase
         if(this.isRecovering) {
-            Message.DataRequestMsg dataRequest = null;
-            for(Message.DataRequestMsg d: this.dataRequests) {
-                if(d.message_id == m.message_id) {
-                    dataRequest = d;
-                    break;
-                }
-            }
 
-            if(dataRequest != null) {
-                this.dataRequests.remove(dataRequest);
+            boolean foundAndRemoved = this.data_requests.remove(m.message_id);
+            if(foundAndRemoved) {
                 this.isRecovering = false;
                 getSender().tell(new Message.NodeAnnounceMsg(this.key), getSelf());
             }
@@ -185,12 +184,12 @@ public class Node extends AbstractActor {
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
     private void OnGetRequest(MessageNode.GetRequestMsg m) {
         ActorRef holdingNode = this.network.get(FindResponsible(m.key));
-        this.read_requests.put(counter, new Identifier(m.msg_id, getSender())); //TODO forse meglio chiamarla readRequests
+        this.read_requests.put(this.counter, new Identifier(m.msg_id, getSender())); //TODO forse meglio chiamarla readRequests
 
         // Timeout
-        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Read time-out", counter, "read"));
-        holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
-        counter += 1;
+        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Read time-out", this.counter, "read"));
+        holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
+        this.counter += 1;
     }
 
     // Node accepts read request
@@ -325,14 +324,14 @@ public class Node extends AbstractActor {
     private void OnUpdateRequest(MessageNode.UpdateRequestMsg m) {
         ActorRef node = this.network.get(FindResponsible(m.key));
         Identifier identifier = new Identifier(m.msg_id, getSender());
-        this.write_requests.put(counter, identifier);
-        this.update_values.put(counter, m.value);
+        this.write_requests.put(this.counter, identifier);
+        this.update_values.put(this.counter, m.value);
 
         // SetTimeout
-        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Write time-out", counter, "write"));
-        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, counter), getSelf());
+        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Write time-out", this.counter, "write"));
 
-        counter += 1;
+        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+        this.counter += 1;
     }
 
     // Node receives the order to crash
@@ -371,15 +370,17 @@ public class Node extends AbstractActor {
             // Find neighbor
             Integer neighborKey = FindNext();
             ActorRef node = this.network.get(neighborKey);
-            Message.DataRequestMsg newMsg = new Message.DataRequestMsg(getSelf());
+
+            // Creating a new data request
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            this.counter += 1;
+            this.data_requests.add(data_request.msg_id);
 
             // Timeout
-            SetTimeout(new Message.NeighborTimeoutMsg(node, neighborKey, newMsg.message_id));
-
-            this.dataRequests.add(newMsg);
+            SetTimeout(new Message.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
 
             // Contact neighbor and request data
-            node.tell(newMsg, getSelf());
+            node.tell(data_request, getSelf());
 
         } else if(this.isRecovering) { // Send the network to the node that wants to recover
 
@@ -400,14 +401,16 @@ public class Node extends AbstractActor {
                 }
             }
 
-            Message.DataRequestMsg dataRequest = new Message.DataRequestMsg(getSelf());
+            // Creating a new data request
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            this.counter += 1;
+            this.data_requests.add(data_request.msg_id);
 
             // Timeout
-            SetTimeout(new Message.NeighborTimeoutMsg(this.network.get(nextKey), nextKey, dataRequest.message_id));
-            this.dataRequests.add(dataRequest);
+            SetTimeout(new Message.NeighborTimeoutMsg(this.network.get(nextKey), nextKey, data_request.msg_id));
 
             // Request items we are responsible for
-            this.network.get(nextKey).tell(dataRequest, getSelf());
+            this.network.get(nextKey).tell(data_request, getSelf());
         }
     }
 
@@ -449,12 +452,10 @@ public class Node extends AbstractActor {
             }
         }
     }
-
-    // Wrapper
-    private Integer FindNext() {
-        return FindNext(this.key);
-    }
-
+    
+    ////////////////////
+    // Functions to find the correct node to which send data
+    
     // Find the node for key k
     private Integer FindNext(Integer k) {
         Integer neighborKey;
@@ -475,18 +476,9 @@ public class Node extends AbstractActor {
         return neighborKey;
     }
 
-    // Find the node responsible for key k
-    private Integer FindResponsible(Integer k) {
-        if(this.network.containsKey(k)) {
-            return k;
-        } else {
-            return FindNext(k);
-        }
-    }
-
     // Wrapper
-    private Integer FindPredecessor() {
-        return FindPredecessor(this.key);
+    private Integer FindNext() {
+        return FindNext(this.key);
     }
 
     // Find the predecessor node with key k
@@ -508,6 +500,21 @@ public class Node extends AbstractActor {
         return neighborKey;
     }
 
+    // Wrapper
+    private Integer FindPredecessor() {
+        return FindPredecessor(this.key);
+    }
+
+    // Find the node responsible for key k
+    private Integer FindResponsible(Integer k) {
+        if(this.network.containsKey(k)) {
+            return k;
+        } else {
+            return FindNext(k);
+        }
+    }
+    
+    
     // Perform multicast to every other node in the network
     private int Multicast(Serializable m, Set<ActorRef> multicastGroup) {
         int i = 0;
@@ -558,28 +565,24 @@ public class Node extends AbstractActor {
 
     public void OnNeighborTimeout(Message.NeighborTimeoutMsg m) {
 
-        Message.DataRequestMsg dataRequest = null;
-        for(Message.DataRequestMsg d: this.dataRequests) {
-            if(d.message_id == m.message_id) {
-                dataRequest = d;
-                break;
-            }
-        }
-
-        if(dataRequest != null) {
-            this.dataRequests.remove(dataRequest);
-
+        boolean foundAndRemoved = this.data_requests.remove(m.message_id);
+        if(foundAndRemoved) {
             ActorRef neighbor = this.network.get(FindNext(m.key));
 
-            Message.DataRequestMsg newDataRequest = new Message.DataRequestMsg(getSelf());
+            // Creating a new data request
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            this.counter += 1;
 
             if(neighbor != getSelf()) {
-                // Timeout
-                SetTimeout(new Message.NeighborTimeoutMsg(neighbor, FindNext(m.key), newDataRequest.message_id));
 
-                this.dataRequests.add(newDataRequest);
+                // Timeout
+                SetTimeout(new Message.NeighborTimeoutMsg(neighbor, FindNext(m.key), data_request.msg_id));
+
+                this.data_requests.add(data_request.msg_id);
+
                 // Contact next neighbor if the first one is crashed
-                neighbor.tell(newDataRequest, getSelf());
+                neighbor.tell(data_request, getSelf());
+
             } else {
                 System.out.println("There are no other nodes alive in the network");
             }
@@ -618,9 +621,5 @@ public class Node extends AbstractActor {
                 getContext().system().dispatcher(),                                                                    // system dispatcher
                 getSelf()                                                                                              // source of the message (myself)
         );
-    }
-
-    private void ComputeQuorum() {
-
     }
 }
