@@ -1,5 +1,6 @@
 package disi.unitn.michele.andrea;
 
+import akka.actor.PoisonPill;
 import scala.concurrent.duration.Duration;
 import akka.actor.AbstractActor;
 import akka.actor.ActorRef;
@@ -11,7 +12,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Node extends AbstractActor {
 
-    private class Identifier {
+    private static class Identifier {
         Integer id;
         ActorRef client;
         Identifier(Integer id, ActorRef client) {
@@ -67,12 +68,12 @@ public class Node extends AbstractActor {
 
     // Dispatcher
     @Override
-    public AbstractActor.Receive createReceive() {
+    public Receive createReceive() {
         return onlineBehavior();
     }
 
     // Dispatcher for the operating node
-    private AbstractActor.Receive onlineBehavior() {
+    private Receive onlineBehavior() {
         return receiveBuilder()
                 .match(Message.JoinNetworkOrder.class, this::OnJoinOrder)
                 .match(Message.DataResponseMsg.class, this::OnDataResponse)
@@ -104,7 +105,7 @@ public class Node extends AbstractActor {
     }
 
     // Dispatcher for the crashed node
-    private AbstractActor.Receive crashedBehavior() {
+    private Receive crashedBehavior() {
         return receiveBuilder()
                 .match(Message.RecoveryRequestOrder.class, this::OnRecoveryRequestOrder)
                 .match(Message.PrintNode.class, this::OnPrintNode)
@@ -119,28 +120,35 @@ public class Node extends AbstractActor {
         m.bootstrapNode.tell(msg, getSelf());
     }
 
-    // Send storage to the new node
+    // Send only data the new node is responsible for
     private void OnDataRequest(MessageNode.DataRequestMsg m) {
-        getSender().tell(new Message.DataResponseMsg(this.storage, this.key, m.msg_id), getSelf());
+
+        // Filter data to be sent to the node
+        HashMap<Integer, DataEntry> data_to_be_sent = new HashMap<>();
+
+        for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
+            Integer k = entry.getKey();
+            DataEntry v = entry.getValue();
+
+            if(IsInInterval(m.key, this.key, k)) {
+                data_to_be_sent.put(k, v);
+            }
+        }
+
+        // Send response
+        getSender().tell(new Message.DataResponseMsg(data_to_be_sent, this.key, m.msg_id), getSelf());
     }
 
     // Node receives the data storage from the neighbor
     private void OnDataResponse(Message.DataResponseMsg m) {
 
-        // TODO move this at the sending point
-        // Take only necessary data
-        Map<Integer, DataEntry> s = m.storage;
+        // Inserting received data into the storage and performing a read to check that data is up-to-date
+        this.valuesToCheck += m.storage.size();
+        this.storage.putAll(m.storage);
 
-        for(Map.Entry<Integer, DataEntry> entry: s.entrySet()) {
-            Integer k = entry.getKey();
-            DataEntry v = entry.getValue();
-
-            if(IsInInterval(this.key, m.key, k)) {
-                this.valuesToCheck++;
-                this.storage.put(k, v);
-                if(!isRecovering) {
-                    getSender().tell(new Message.ReadRequestMsg(getSelf(), k, 0), getSelf());
-                }
+        for(Integer k: m.storage.keySet()) {
+            if(!this.isRecovering) {
+                getSender().tell(new Message.ReadRequestMsg(getSelf(), k, 0), getSelf());
             }
         }
 
@@ -372,7 +380,7 @@ public class Node extends AbstractActor {
             ActorRef node = this.network.get(neighborKey);
 
             // Creating a new data request
-            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
             this.counter += 1;
             this.data_requests.add(data_request.msg_id);
 
@@ -402,7 +410,7 @@ public class Node extends AbstractActor {
             }
 
             // Creating a new data request
-            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
             this.counter += 1;
             this.data_requests.add(data_request.msg_id);
 
@@ -538,16 +546,10 @@ public class Node extends AbstractActor {
     // Returns true if value should be saved in the new node
     private boolean IsInInterval(Integer newNodeKey, Integer nextNodeKey, Integer value) {
         if(newNodeKey > nextNodeKey) {
-            if(value <= newNodeKey && value > nextNodeKey) {
-                return true;
-            }
+            return value <= newNodeKey && value > nextNodeKey;
         } else {
-            if(value > nextNodeKey || value <= newNodeKey) {
-                return true;
-            }
+            return value > nextNodeKey || value <= newNodeKey;
         }
-
-        return false;
     }
 
     // Put data in the storage
@@ -570,7 +572,7 @@ public class Node extends AbstractActor {
             ActorRef neighbor = this.network.get(FindNext(m.key));
 
             // Creating a new data request
-            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.counter);
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
             this.counter += 1;
 
             if(neighbor != getSelf()) {
@@ -592,7 +594,7 @@ public class Node extends AbstractActor {
     public void OnPassDataTimeoutMsg(Message.PassDataTimeoutMsg m) {
 
         if(this.canDie) {
-            getSelf().tell(akka.actor.PoisonPill.getInstance(), ActorRef.noSender());
+            getSelf().tell(PoisonPill.getInstance(), ActorRef.noSender());
         }
         else {
             // Get neighbor key

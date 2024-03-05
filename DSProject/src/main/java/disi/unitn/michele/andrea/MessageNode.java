@@ -30,9 +30,11 @@ public class MessageNode {
     }
 
     public static class DataRequestMsg implements Serializable {
+        public final int key;
         public final int msg_id;
 
-        public DataRequestMsg(int msg_id) {
+        public DataRequestMsg(int key, int msg_id) {
+            this.key = key;
             this.msg_id = msg_id;
         }
     }
