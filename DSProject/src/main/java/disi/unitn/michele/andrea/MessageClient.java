@@ -5,6 +5,7 @@ import java.io.Serializable;
 
 /***** Messages received by the Client coming from the Main or Nodes *****/
 public class MessageClient {
+
     ////////////////////
     // Join
     public static class JoinSystemMsg implements Serializable {}

@@ -10,10 +10,16 @@ import java.util.HashSet;
 public class Client extends AbstractActor {
 
     private final int key;
+
+    // Contains
     private final HashSet<Integer> write_requests;
     private final HashSet<Integer> read_requests;
-    private final int T; // timeout in ms
-    private int counter = 0; // counter to be used for message ids. Gets increased at every use
+
+    // Timeout in ms
+    private final int T;
+
+    // Counter to be used for message ids. Gets increased at every use
+    private int counter = 0;
 
 
     /***** Constructor *****/
@@ -27,32 +33,6 @@ public class Client extends AbstractActor {
     static public Props props(int key, int T) {
         return Props.create(Client.class, () -> new Client(key, T));
     }
-
-
-    /*@Override
-    public Receive createReceive() {
-        return receiveBuilder()
-                // Join
-                .match(MessageClient.JoinSystemMsg.class, this::OnJoinSystem)
-
-                // Requests
-                .match(Message.GetRequestOrderMsg.class, this::OnGetRequestOrder)
-                .match(Message.UpdateRequestOrderMsg.class, this::OnUpdateRequestOrder)
-
-                // Responses
-                .match(Message.ReadResponseMsg.class, this::OnReadResponse)
-                .match(Message.WriteResponseMsg.class, this::OnWriteResponse)
-
-                // Timeout
-                .match(Message.TimeoutMsg.class, this::OnTimeOut)
-
-                // Log
-                .match(Message.PrintClient.class, this::OnPrintClient)
-                .match(Message.ErrorMsg.class, this::OnError)
-
-                .build();
-    }*/
-
 
     /***** Dispatcher *****/
     @Override
@@ -118,7 +98,6 @@ public class Client extends AbstractActor {
 
     ////////////////////
     // Responses
-
     private void OnGetResponse(MessageClient.GetResponseMsg m) {
         log("received " + "(" + m.key + ", " + m.entry.GetValue() + ", ver: " + m.entry.GetVersion() + ")");
 
@@ -135,7 +114,6 @@ public class Client extends AbstractActor {
 
     ////////////////////
     // Timeouts
-
     private void OnGetTimeout(MessageClient.GetTimeoutMsg m) {
 
         // Read request not completed
@@ -176,107 +154,6 @@ public class Client extends AbstractActor {
     private void SetTimeout(MessageClient.BaseTimeout m) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(this.T, TimeUnit.MILLISECONDS), // how frequently generate them
-                getSelf(),                                       // destination actor reference
-                m,                                               // the message to send
-                getContext().system().dispatcher(),              // system dispatcher
-                getSelf()                                        // source of the message (myself)
-        );
-    }
-
-    /**********/
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-    // Client receives a get request from main
-    private void OnGetRequestOrder(Message.GetRequestOrderMsg m) {
-
-        Message.ReadRequestMsg req = new Message.ReadRequestMsg(getSelf(), m.key);
-        this.read_requests.add(req.message_id);
-
-        // Timeout
-        SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Read time-out", req.message_id, "read"));
-        m.node.tell(req, getSelf());
-    }
-
-    // When receives the response for a read print data item
-    private void OnReadResponse(Message.ReadResponseMsg m) {
-        System.out.println("\t\t Client " + this.key + " received value " + m.value.GetValue() + " for key " + m.key);
-        this.read_requests.remove(m.message_id);
-    }
-
-    // Receives a write response message from the coordinator
-    /*private void OnWriteResponse(Message.WriteResponseMsg m) {
-
-        Message.WriteRequestMsg write_request = null;
-        for(Message.WriteRequestMsg w : this.write_requests) {
-            if(w.message_id == m.message_id) {
-                write_request = w;
-                break;
-            }
-        }
-
-        if(write_request != null) {
-            this.write_requests.remove(write_request);
-        }
-
-        System.out.println("\t\t Value " + m.value + " was written");
-    }*/
-
-    // Client receives an update request from main
-    private void OnUpdateRequestOrder(Message.UpdateRequestOrderMsg m) {
-
-        Message.WriteRequestMsg req = new Message.WriteRequestMsg(getSelf(), m.key, m.value);
-        this.write_requests.add(req.message_id);
-
-        // Timeout
-        SetTimeout(new Message.TimeoutMsg(getSelf(), m.key, "Write time-out", req.message_id, "write"));
-        m.node.tell(req, getSelf());
-    }
-
-    // Print errors
-    private void OnError(Message.ErrorMsg m) {
-        System.err.println(m.msg);
-    }
-
-    // Print client
-    private void OnPrintClient(Message.PrintClient m) {
-        System.out.println("\t Client " + this.key);
-    }
-
-    private void OnTimeOut(Message.TimeoutMsg m) {
-
-        if ("write".equals(m.operation)) {
-
-            if (this.write_requests.contains(m.message_id)) {
-                getSelf().tell(new Message.ErrorMsg("Cannot update value for key: " + m.key), getSelf());
-                this.write_requests.remove(m.message_id);
-            }
-
-        } else if ("read".equals(m.operation)) {
-
-            // if read request han not been satisfied, error is thrown
-            if(this.read_requests.contains(m.message_id)) {
-                getSelf().tell(new Message.ErrorMsg("Cannot read value for key: " + m.key), getSelf());
-                this.read_requests.remove(m.message_id);
-            }
-        }
-    }
-
-    private void SetTimeout(Message.BaseMessage m) {
-        getContext().system().scheduler().scheduleOnce(
-                Duration.create(T, TimeUnit.MILLISECONDS), // how frequently generate them
                 getSelf(),                                       // destination actor reference
                 m,                                               // the message to send
                 getContext().system().dispatcher(),              // system dispatcher

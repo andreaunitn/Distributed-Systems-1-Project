@@ -29,7 +29,7 @@ public class Node extends AbstractActor {
     private int valuesToCheck = 0;
     private boolean canDie = false;
 
-    // counter to be used for message ids. Gets increased at every use
+    // Counter to be used for message ids. Gets increased at every use
     private int counter = 0;
 
     // Network view
@@ -38,16 +38,16 @@ public class Node extends AbstractActor {
     // Data contained
     private HashMap<Integer, DataEntry> storage;
     
-    // contains the associations between the message id and the originating client for the write requests
+    // Contains the associations between the message id and the originating client for the write requests
     private HashMap<Integer, Identifier> write_requests;
 
-    // contains the association between the request id and the originating client for the read requests
+    // Contains the association between the request id and the originating client for the read requests
     private HashMap<Integer, Identifier> read_requests;
 
-    // contains the association between the message id and the value to be updated
+    // Contains the association between the message id and the value to be updated
     private HashMap<Integer, String> update_values;
     
-    // contains the ids of sent data requests of which I still haven't received an answer
+    // Contains the ids of sent data requests of which I still haven't received an answer
     private HashSet<Integer> data_requests;
 
     public Node(Integer key) {
@@ -75,8 +75,6 @@ public class Node extends AbstractActor {
     // Dispatcher for the operating node
     private Receive onlineBehavior() {
         return receiveBuilder()
-                .match(Message.JoinNetworkOrder.class, this::OnJoinOrder)
-                .match(Message.DataResponseMsg.class, this::OnDataResponse)
                 .match(Message.PrintNode.class, this::OnPrintNode)
                 .match(Message.NodeAnnounceMsg.class, this::OnNodeAnnounce)
                 .match(Message.ReadRequestMsg.class, this::OnReadRequest)
@@ -87,19 +85,29 @@ public class Node extends AbstractActor {
                 .match(Message.ErrorNoValueFound.class, this::OnNoValueFound)
                 .match(Message.WriteContentMsg.class, this::OnWriteContentMsg)
                 .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
-                .match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
+                //.match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
                 .match(Message.ErrorMsg.class, this::OnError)
-                .match(Message.TimeoutMsg.class, this::OnTimeOut)
-                .match(Message.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
-                .match(Message.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
                 .match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
 
                 // New
+                // Join
+                .match(MessageNode.JoinSystemMsg.class, this::OnJoinSystem)
+
                 // Requests
                 .match(MessageNode.GetRequestMsg.class, this::OnGetRequest)
                 .match(MessageNode.UpdateRequestMsg.class, this::OnUpdateRequest)
                 .match(MessageNode.NetworkRequestMsg.class, this::OnNetworkRequest)
                 .match(MessageNode.DataRequestMsg.class, this::OnDataRequest)
+
+                // Responses
+                .match(MessageNode.DataResponseMsg.class, this::OnDataResponse)
+                .match(MessageNode.NetworkResponseMsg.class, this::OnNetworkResponse)
+
+                // Timeouts
+                .match(MessageNode.ReadTimeoutMsg.class, this::OnReadTimeout)
+                .match(MessageNode.WriteTimeoutMsg.class, this::OnWriteTimeout)
+                .match(MessageNode.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
+                .match(MessageNode.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
 
                 .build();
     }
@@ -114,13 +122,11 @@ public class Node extends AbstractActor {
     }
 
     // New node contacts bootstrapper
-    private void OnJoinOrder(Message.JoinNetworkOrder m) {
+    private void OnJoinSystem(MessageNode.JoinSystemMsg m) {
         this.isJoining = true;
-        MessageNode.NetworkRequestMsg msg = new MessageNode.NetworkRequestMsg();
-        m.bootstrapNode.tell(msg, getSelf());
+        m.bootstrap_node.tell(new MessageNode.NetworkRequestMsg(), getSelf());
     }
 
-    // Send only data the new node is responsible for
     private void OnDataRequest(MessageNode.DataRequestMsg m) {
 
         // Filter data to be sent to the node
@@ -136,11 +142,10 @@ public class Node extends AbstractActor {
         }
 
         // Send response
-        getSender().tell(new Message.DataResponseMsg(data_to_be_sent, this.key, m.msg_id), getSelf());
+        getSender().tell(new MessageNode.DataResponseMsg(data_to_be_sent, this.key, m.msg_id), getSelf());
     }
 
-    // Node receives the data storage from the neighbor
-    private void OnDataResponse(Message.DataResponseMsg m) {
+    private void OnDataResponse(MessageNode.DataResponseMsg m) {
 
         // Inserting received data into the storage and performing a read to check that data is up-to-date
         this.valuesToCheck += m.storage.size();
@@ -156,7 +161,7 @@ public class Node extends AbstractActor {
         if(this.isJoining) {
 
             // Request removed because is completed
-            this.data_requests.remove(m.message_id);
+            this.data_requests.remove(m.msg_id);
 
             // The node has sent an empty storage and can join the network
             if(this.valuesToCheck == 0) {
@@ -168,7 +173,7 @@ public class Node extends AbstractActor {
         // Recovering phase
         if(this.isRecovering) {
 
-            boolean foundAndRemoved = this.data_requests.remove(m.message_id);
+            boolean foundAndRemoved = this.data_requests.remove(m.msg_id);
             if(foundAndRemoved) {
                 this.isRecovering = false;
                 getSender().tell(new Message.NodeAnnounceMsg(this.key), getSelf());
@@ -192,10 +197,10 @@ public class Node extends AbstractActor {
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
     private void OnGetRequest(MessageNode.GetRequestMsg m) {
         ActorRef holdingNode = this.network.get(FindResponsible(m.key));
-        this.read_requests.put(this.counter, new Identifier(m.msg_id, getSender())); //TODO forse meglio chiamarla readRequests
+        this.read_requests.put(this.counter, new Identifier(m.msg_id, getSender()));
 
         // Timeout
-        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Read time-out", this.counter, "read"));
+        SetTimeout(new MessageNode.ReadTimeoutMsg(getSender(), m.key, "Read time-out", this.counter));
         holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
         this.counter += 1;
     }
@@ -241,17 +246,21 @@ public class Node extends AbstractActor {
 
             // Node is ready to join the network
             if(this.isJoining) {
+
                 // Check data is OK
                 this.storage.put(m.key, m.value);
+
                 if(this.valuesToCheck > 0) {
                     this.valuesToCheck--;
                 }
 
                 if(this.valuesToCheck == 0) {
+
                     // Node is ready, Multicast to every other nodes in the network
                     Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                     this.isJoining = false;
                 }
+
             } else { // Node is ready to write
 
                 // this node is the recipient
@@ -293,6 +302,7 @@ public class Node extends AbstractActor {
 
         // Get neighbor key
         Integer neighborKey = FindNext();
+
         if(neighborKey != this.key) {
             ActorRef node = this.network.get(neighborKey);
 
@@ -301,7 +311,7 @@ public class Node extends AbstractActor {
         }
 
         // SetTimeout
-        SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
+        SetTimeout(new MessageNode.PassDataTimeoutMsg(neighborKey));
     }
 
     // Node includes receiving items to its storage
@@ -330,13 +340,14 @@ public class Node extends AbstractActor {
 
     // Node receives a write request
     private void OnUpdateRequest(MessageNode.UpdateRequestMsg m) {
+
         ActorRef node = this.network.get(FindResponsible(m.key));
         Identifier identifier = new Identifier(m.msg_id, getSender());
         this.write_requests.put(this.counter, identifier);
         this.update_values.put(this.counter, m.value);
 
-        // SetTimeout
-        SetTimeout(new Message.TimeoutMsg(getSender(), m.key, "Write time-out", this.counter, "write"));
+        // Set timeout
+        SetTimeout(new MessageNode.WriteTimeoutMsg(getSender(), m.key, "Write time-out", this.counter));
 
         node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
         this.counter += 1;
@@ -351,6 +362,7 @@ public class Node extends AbstractActor {
 
     // Node receives the order to recovery from the crashed state
     private void OnRecoveryRequestOrder(Message.RecoveryRequestOrder m) {
+
         if(m.node != null) {
             // Contact bootstrapper node for recovery
             m.node.tell(new MessageNode.NetworkRequestMsg(), getSelf());
@@ -363,11 +375,11 @@ public class Node extends AbstractActor {
 
     // Tell node to begin recovery procedure
     private void OnNetworkRequest(MessageNode.NetworkRequestMsg m) {
-        getSender().tell(new Message.NetworkResponseMsg(this.network), getSelf());
+        getSender().tell(new MessageNode.NetworkResponseMsg(this.network), getSelf());
     }
 
     // Node begins recovery protocol by asking other nodes the data items
-    private void OnNetworkResponseMsg(Message.NetworkResponseMsg m) {
+    private void OnNetworkResponse(MessageNode.NetworkResponseMsg m) {
 
         // Send the network to the joining node
         if(this.isJoining) {
@@ -384,8 +396,8 @@ public class Node extends AbstractActor {
             this.counter += 1;
             this.data_requests.add(data_request.msg_id);
 
-            // Timeout
-            SetTimeout(new Message.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
+            // Set timeout
+            SetTimeout(new MessageNode.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
 
             // Contact neighbor and request data
             node.tell(data_request, getSelf());
@@ -414,8 +426,8 @@ public class Node extends AbstractActor {
             this.counter += 1;
             this.data_requests.add(data_request.msg_id);
 
-            // Timeout
-            SetTimeout(new Message.NeighborTimeoutMsg(this.network.get(nextKey), nextKey, data_request.msg_id));
+            // Set timeout
+            SetTimeout(new MessageNode.NeighborTimeoutMsg(this.network.get(nextKey), nextKey, data_request.msg_id));
 
             // Request items we are responsible for
             this.network.get(nextKey).tell(data_request, getSelf());
@@ -424,7 +436,7 @@ public class Node extends AbstractActor {
 
     // Print node storage
     private void OnPrintNode(Message.PrintNode m) {
-        if(isCrashed) {
+        if(this.isCrashed) {
             System.err.println("\t Node: " + this.key);
         }
         else {
@@ -438,26 +450,30 @@ public class Node extends AbstractActor {
         System.out.println();
     }
 
-    // Node timeout
-    private void OnTimeOut(Message.TimeoutMsg m) {
-        if(m.operation.equals("write")) {
+    ////////////////////
+    // Timeouts
 
-            // write operation failed and we're removing it from the map and reporting the problem to client
-            Identifier identity = this.write_requests.get(m.message_id);
-            if(identity != null) {
-                ActorRef recipient = identity.client;
-                this.write_requests.remove(m.message_id);
-                recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
-            }
-        } else if(m.operation.equals("read")) {
+    private void OnReadTimeout(MessageNode.ReadTimeoutMsg m) {
 
-            // read operation failed and we're removing it from the map and reporting the problem to client
-            Identifier identity = this.read_requests.get(m.message_id);
-            if(identity != null) {
-                ActorRef recipient = identity.client;
-                this.read_requests.remove(m.message_id);
-                recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
-            }
+        // read operation failed, we're removing it from the map and reporting the problem to client
+        Identifier identity = this.read_requests.get(m.msg_id);
+
+        if(identity != null) {
+            ActorRef recipient = identity.client;
+            this.read_requests.remove(m.msg_id);
+            recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
+        }
+    }
+
+    private void OnWriteTimeout(MessageNode.WriteTimeoutMsg m) {
+
+        // write operation failed, we're removing it from the map and reporting the problem to client
+        Identifier identity = this.write_requests.get(m.msg_id);
+
+        if(identity != null) {
+            ActorRef recipient = identity.client;
+            this.write_requests.remove(m.msg_id);
+            recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
         }
     }
     
@@ -472,9 +488,9 @@ public class Node extends AbstractActor {
         ArrayList<Integer> keyList = new ArrayList<>(keySet);
         Collections.sort(keyList);
 
-        for(int i = 0; i < keyList.size(); i++) {
-            if(keyList.get(i) > k) {
-                neighborKey = keyList.get(i);
+        for (Integer integer : keyList) {
+            if (integer > k) {
+                neighborKey = integer;
                 return neighborKey;
             }
         }
@@ -565,7 +581,7 @@ public class Node extends AbstractActor {
         }
     }
 
-    public void OnNeighborTimeout(Message.NeighborTimeoutMsg m) {
+    public void OnNeighborTimeout(MessageNode.NeighborTimeoutMsg m) {
 
         boolean foundAndRemoved = this.data_requests.remove(m.message_id);
         if(foundAndRemoved) {
@@ -578,7 +594,7 @@ public class Node extends AbstractActor {
             if(neighbor != getSelf()) {
 
                 // Timeout
-                SetTimeout(new Message.NeighborTimeoutMsg(neighbor, FindNext(m.key), data_request.msg_id));
+                SetTimeout(new MessageNode.NeighborTimeoutMsg(neighbor, FindNext(m.key), data_request.msg_id));
 
                 this.data_requests.add(data_request.msg_id);
 
@@ -591,14 +607,16 @@ public class Node extends AbstractActor {
         }
     }
 
-    public void OnPassDataTimeoutMsg(Message.PassDataTimeoutMsg m) {
+    public void OnPassDataTimeoutMsg(MessageNode.PassDataTimeoutMsg m) {
 
         if(this.canDie) {
             getSelf().tell(PoisonPill.getInstance(), ActorRef.noSender());
-        }
-        else {
+
+        } else {
+
             // Get neighbor key
             Integer neighborKey = FindNext(m.key);
+
             if(neighborKey != this.key) {
                 ActorRef node = this.network.get(neighborKey);
 
@@ -607,15 +625,15 @@ public class Node extends AbstractActor {
             }
 
             // Timeout
-            SetTimeout(new Message.PassDataTimeoutMsg(neighborKey));
+            SetTimeout(new MessageNode.PassDataTimeoutMsg(neighborKey));
         }
     }
 
-    private void SetTimeout(Message.BaseMessage m) {
+    private void SetTimeout(MessageNode.BaseTimeout m) {
         SetTimeout(m, 200);
     }
 
-    private void SetTimeout(Message.BaseMessage m, int msTimer) {
+    private void SetTimeout(MessageNode.BaseTimeout m, int msTimer) {
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(msTimer, TimeUnit.MILLISECONDS),                                                       // how frequently generate them
                 getSelf(),                                                                                             // destination actor reference

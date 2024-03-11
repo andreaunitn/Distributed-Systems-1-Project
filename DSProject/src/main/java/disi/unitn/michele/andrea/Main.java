@@ -116,13 +116,14 @@ public class Main {
                             Random generator = new Random();
                             Object[] values = ring.available_nodes.toArray();
                             ActorRef randomBootstrapper = (ActorRef) values[generator.nextInt(values.length)];
-                            node.tell(new Message.JoinNetworkOrder(randomBootstrapper), ActorRef.noSender());
+                            node.tell(new MessageNode.JoinSystemMsg(randomBootstrapper), ActorRef.noSender());
                         }
 
                         ring.hash_table.put(k, node);
                         ring.available_nodes.add(node);
                     }
 
+                    // TODO: stampa nel nodo
                     System.out.println("\t\t Node successfully created\n");
                     break;
 
