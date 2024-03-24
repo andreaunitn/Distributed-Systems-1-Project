@@ -212,20 +212,29 @@ public class Node extends AbstractActor {
 
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
     private void OnGetRequest(MessageNode.GetRequestMsg m) {
-        ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+
         this.read_requests.put(this.counter, new Identifier(m.msg_id, getSender()));
         this.read_responses.put(this.counter, new ArrayList<DataEntry>());
 
+        // Contact the nodes responsible for the key
+        if(network.size() < N) {
+            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+            holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
+        } else {
+            for(ActorRef node : FindResponsibles(m.key)) {
+                node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+            }
+        }
+
         // Timeout
         SetTimeout(new MessageNode.ReadTimeoutMsg(getSender(), m.key, "Read time-out", this.counter));
-        holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ? (readResponse si romperebbe)
         this.counter += 1;
     }
 
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
         if(this.storage.containsKey(m.key)) {
-            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf()); //TODO rimuovi sender dal messaggio quando opportuno ?
+            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
         } else {
             getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null, m.message_id), getSelf());
         }
@@ -577,7 +586,18 @@ public class Node extends AbstractActor {
             return FindNext(k);
         }
     }
-    
+
+    // Find the nodes responsible for key k, use only if network size >= N
+    private ActorRef[] FindResponsibles(Integer k) {
+        ActorRef[] responsibles = new ActorRef[N];
+        responsibles[0] = this.network.get(FindResponsible(k));
+        int next = FindNext(k);
+        for (int i=1; i<N; i++) {
+            responsibles[i] = this.network.get(FindResponsible(next));
+            next = FindNext(next);
+        }
+        return responsibles;
+    }
     
     // Perform multicast to every other node in the network
     private int Multicast(Serializable m, Set<ActorRef> multicastGroup) {
