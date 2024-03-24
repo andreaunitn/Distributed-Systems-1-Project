@@ -6,16 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="9523280f-6d05-484f-8f4c-7ecdd90564b8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/Client.class" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/Client.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/MessageNode.class" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/MessageNode.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/Node.class" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/build/classes/java/main/disi/unitn/michele/andrea/Node.class" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Client.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Client.java" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/MessageNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/MessageNode.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
     </list>
-    <list id="ec4155ec-455b-4346-83d3-2fb59fd236b0" name="Changes by andreatomasoni" comment="">
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
-    </list>
+    <list id="ec4155ec-455b-4346-83d3-2fb59fd236b0" name="Changes by andreatomasoni" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -41,40 +35,6 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="LineStatusTrackerManager">
-    <file path="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java">
-      <ranges>
-        <range start1="2" end1="2" start2="2" end2="3" changelist="ec4155ec-455b-4346-83d3-2fb59fd236b0" />
-        <range start1="15" end1="17" start2="16" end2="18" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="18" end1="19" start2="19" end2="20" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="33" end1="34" start2="34" end2="38" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="36" end1="37" start2="40" end2="41" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="45" end1="47" start2="49" end2="51" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="48" end1="48" start2="52" end2="53" changelist="ec4155ec-455b-4346-83d3-2fb59fd236b0" />
-        <range start1="75" end1="76" start2="80" end2="81" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="86" end1="86" start2="91" end2="92" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="87" end1="88" start2="93" end2="95" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="208" end1="209" start2="215" end2="216" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="210" end1="211" start2="217" end2="218" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="214" end1="215" start2="221" end2="222" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="230" end1="237" start2="237" end2="240" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="238" end1="240" start2="241" end2="242" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="241" end1="254" start2="243" end2="252" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="280" end1="287" start2="278" end2="280" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="288" end1="294" start2="281" end2="292" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="295" end1="299" start2="293" end2="297" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="305" end1="307" start2="303" end2="305" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="308" end1="309" start2="306" end2="307" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="360" end1="361" start2="358" end2="359" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="362" end1="363" start2="360" end2="363" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="365" end1="366" start2="365" end2="367" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="367" end1="368" start2="368" end2="369" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="444" end1="451" start2="445" end2="445" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="452" end1="455" start2="446" end2="452" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="459" end1="463" start2="456" end2="460" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-      </ranges>
-    </file>
-  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -86,22 +46,22 @@
     <option name="hideEmptyMiddlePackages" value="true" />
     <option name="showLibraryContents" value="true" />
   </component>
-  <component name="PropertiesComponent">{
-  &quot;keyToString&quot;: {
-    &quot;Application.Main.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.Build DSProject.executor&quot;: &quot;Run&quot;,
-    &quot;Gradle.DSProject [:Main.main()].executor&quot;: &quot;Run&quot;,
-    &quot;RunOnceActivity.OpenProjectViewOnStart&quot;: &quot;true&quot;,
-    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
-    &quot;git-widget-placeholder&quot;: &quot;review&quot;,
-    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
-    &quot;last_opened_file_path&quot;: &quot;/Users/michelelamon/Documents/UNITN/Distributed Systems 1/Distributed-Systems-1-Project&quot;,
-    &quot;project.structure.last.edited&quot;: &quot;Modules&quot;,
-    &quot;project.structure.proportion&quot;: &quot;0.15&quot;,
-    &quot;project.structure.side.proportion&quot;: &quot;0.2&quot;,
-    &quot;settings.editor.selected.configurable&quot;: &quot;reference.settingsdialog.project.gradle&quot;
+  <component name="PropertiesComponent"><![CDATA[{
+  "keyToString": {
+    "Application.Main.executor": "Run",
+    "Gradle.Build DSProject.executor": "Run",
+    "Gradle.DSProject [:Main.main()].executor": "Run",
+    "RunOnceActivity.OpenProjectViewOnStart": "true",
+    "RunOnceActivity.ShowReadmeOnStart": "true",
+    "git-widget-placeholder": "review",
+    "kotlin-language-version-configured": "true",
+    "last_opened_file_path": "/Users/michelelamon/Documents/UNITN/Distributed Systems 1/Distributed-Systems-1-Project",
+    "project.structure.last.edited": "Modules",
+    "project.structure.proportion": "0.15",
+    "project.structure.side.proportion": "0.2",
+    "settings.editor.selected.configurable": "com.github.copilot.settings.ApplicationConfigurable"
   }
-}</component>
+}]]></component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>

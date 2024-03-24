@@ -21,31 +21,9 @@ public class Main {
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
 
-        float WN;
-        float RN;
-        int T;
-        
-        while(true) {
-            System.out.print("Type the desired value for W/N: ");
-            WN = in.nextFloat();
-
-            System.out.print("Type the desired value for R/N: ");
-            RN = in.nextFloat();
-
-            System.out.print("Specify the timeout for all the operations (milliseconds): ");
-            T = in.nextInt();
-            
-            // Check conditions for w and r
-            if(WN > 0 && RN > 0 && WN + RN > 1 && WN > 0.5 && T > 0) {
-                break;
-            }
-            else {
-                System.out.println("Invalid values:");
-                System.out.println("  1) W/N + R/N must be > 1");
-                System.out.println("  2) W/N must be > 0.5");
-                System.out.println("  3) T must be positive");
-            }
-        }
+        //int N=3, R=2, W=2;
+        int N=1, R=1, W=11;
+        int T=200;
         
         System.out.println("Network Initialized");
 
@@ -109,7 +87,7 @@ public class Main {
                             k = in.nextInt();
                         }
 
-                        ActorRef node = system.actorOf(Node.props(k), "Node" + k);
+                        ActorRef node = system.actorOf(Node.props(k, N, R, W, T), "Node" + k);
 
                         if(!ring.available_nodes.isEmpty()) {
 
