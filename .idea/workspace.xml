@@ -6,9 +6,13 @@
   <component name="ChangeListManager">
     <list default="true" id="9523280f-6d05-484f-8f4c-7ecdd90564b8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/DataEntry.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/DataEntry.java" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Main.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
     </list>
-    <list id="ec4155ec-455b-4346-83d3-2fb59fd236b0" name="Changes by andreatomasoni" comment="" />
+    <list id="ec4155ec-455b-4346-83d3-2fb59fd236b0" name="Changes by andreatomasoni" comment="">
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
+    </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -34,6 +38,38 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
+  <component name="LineStatusTrackerManager">
+    <file path="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java">
+      <ranges>
+        <range start1="48" end1="48" start2="48" end2="54" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="74" end1="74" start2="80" end2="82" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="216" end1="217" start2="224" end2="225" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="224" end1="225" start2="232" end2="234" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="238" end1="239" start2="247" end2="248" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="246" end1="246" start2="255" end2="257" changelist="ec4155ec-455b-4346-83d3-2fb59fd236b0" />
+        <range start1="247" end1="250" start2="258" end2="284" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="251" end1="255" start2="285" end2="298" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="256" end1="257" start2="299" end2="311" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="258" end1="260" start2="312" end2="317" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="261" end1="266" start2="318" end2="331" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="299" end1="300" start2="364" end2="368" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="301" end1="305" start2="369" end2="377" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="306" end1="309" start2="378" end2="392" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="310" end1="312" start2="393" end2="395" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="313" end1="315" start2="396" end2="403" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="324" end1="324" start2="412" end2="413" changelist="ec4155ec-455b-4346-83d3-2fb59fd236b0" />
+        <range start1="333" end1="333" start2="422" end2="429" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="334" end1="343" start2="430" end2="449" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="391" end1="392" start2="497" end2="498" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="395" end1="395" start2="501" end2="515" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="399" end1="400" start2="519" end2="519" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="524" end1="524" start2="643" end2="646" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="592" end1="594" start2="714" end2="718" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="635" end1="637" start2="759" end2="761" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+        <range start1="639" end1="640" start2="763" end2="764" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
+      </ranges>
+    </file>
+  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
   </component>
@@ -58,7 +94,7 @@
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "com.github.copilot.settings.ApplicationConfigurable"
+    "settings.editor.selected.configurable": "configurable.group.appearance"
   }
 }]]></component>
   <component name="SharedIndexes">

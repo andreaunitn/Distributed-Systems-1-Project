@@ -10,6 +10,12 @@ public class DataEntry {
         this.version = 1;
     }
 
+    // To be used for the "empty" data entry, with version -1
+    public DataEntry(String value, int version){
+        this.value = value;
+        this.version = version;
+    }
+
     // Get value of the data
     public String GetValue() {
         return this.value;

@@ -47,6 +47,12 @@ public class Node extends AbstractActor {
     // Contains the association between the message id and the read responses (used to hold messages for replication)
     private HashMap<Integer, List<DataEntry>> read_responses;
 
+    // Contains the association between the message id and the actors that replied to the write (update) request
+    private HashMap<Integer, List<DataEntry>> write_responses;
+
+    // Contains the recipients of each update request
+    private HashMap<Integer, Set<ActorRef>> write_recipients;
+
     // Contains the association between the message id and the value to be updated
     private HashMap<Integer, String> update_values;
     
@@ -72,6 +78,8 @@ public class Node extends AbstractActor {
         this.read_responses = new HashMap<>();
         this.data_requests = new HashSet<>();
         this.update_values = new HashMap<>();
+        this.write_responses = new HashMap<>();
+        this.write_recipients = new HashMap<>();
         this.N = N;
         this.R = R;
         this.W = W;
@@ -214,7 +222,7 @@ public class Node extends AbstractActor {
     private void OnGetRequest(MessageNode.GetRequestMsg m) {
 
         this.read_requests.put(this.counter, new Identifier(m.msg_id, getSender()));
-        this.read_responses.put(this.counter, new ArrayList<DataEntry>());
+        this.read_responses.put(this.counter, new ArrayList<>());
 
         // Contact the nodes responsible for the key
         if(network.size() < N) {
@@ -222,7 +230,8 @@ public class Node extends AbstractActor {
             holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
         } else {
             for(ActorRef node : FindResponsibles(m.key)) {
-                node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+                System.out.println(node);
+                node.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
             }
         }
 
@@ -236,7 +245,7 @@ public class Node extends AbstractActor {
         if(this.storage.containsKey(m.key)) {
             getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
         } else {
-            getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, null, m.message_id), getSelf());
+            getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, new DataEntry(null, -1), m.message_id), getSelf());
         }
     }
 
@@ -244,26 +253,82 @@ public class Node extends AbstractActor {
     private void OnNoValueFound(Message.ErrorNoValueFound m) {
 
         Identifier identity = this.read_requests.get(m.message_id);
+
+        // I'm reading for a read request
         if(identity != null) {
-            identity.client.tell(new MessageClient.PrintErrorMsg("cannot read value for key: " + m.key), getSelf());
-            this.read_requests.remove(m.message_id);
-            this.read_responses.remove(m.message_id);
+
+            if(this.read_responses.get(m.message_id) != null) {
+                this.read_responses.get(m.message_id).add(m.data);
+
+                // check if we have enough responses
+                if(this.read_responses.get(m.message_id).size() == this.R) {
+
+                    ActorRef recipient = identity.client;
+
+                    DataEntry value = this.read_responses.get(m.message_id).get(0);
+                    for (DataEntry entry : this.read_responses.get(m.message_id)) {
+                        if (entry.IsOutdated(value)) {
+                            value = entry;
+                        }
+                    }
+
+                    if(value.GetVersion() == -1) {
+                        identity.client.tell(new MessageClient.PrintErrorMsg("cannot read value for key: " + m.key), getSelf());
+                    } else {
+                        recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), getSelf());
+                    }
+
+                    this.read_requests.remove(m.message_id);
+                    this.read_responses.remove(m.message_id);
+                }
+            }
         }
-        else {
-            identity = this.write_requests.get(m.message_id);
-            ActorRef recipient = identity.client;
-            String newValue = this.update_values.get(m.message_id);
+        else { // I'm reading for a write request
 
-            DataEntry data = new DataEntry(newValue);
+            // nodes don't hold the requested value. as soon as W reply, send new value
 
-            recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
-            getSender().tell(new Message.WriteContentMsg(m.key, data), getSelf());
+            if(write_responses.get(m.message_id) != null) {
+                this.write_responses.get(m.message_id).add(m.data);
 
-            // removing request because is completed
-            this.write_requests.remove(m.message_id);
+                // check if we have enough responses
+                if(this.write_responses.get(m.message_id).size() == this.W) {
 
-            // removing value because the update is completed
-            this.update_values.remove(m.message_id);
+                    identity = this.write_requests.get(m.message_id);
+                    ActorRef recipient = identity.client;
+                    String newValue = this.update_values.get(m.message_id);
+
+                    DataEntry value = this.write_responses.get(m.message_id).get(0);
+                    for (DataEntry entry : this.write_responses.get(m.message_id)) {
+                        if (entry.IsOutdated(value)) {
+                            value = entry;
+                        }
+                    }
+
+                    if(value.GetVersion() == -1) {
+                        value = new DataEntry(newValue);
+                    } else {
+                        value.SetValue(newValue, true);
+                    }
+
+                    System.out.println("Write recipients size: " + write_recipients.get(m.message_id).size());
+                    // send new value to the nodes that should hold the value
+                    for(ActorRef node : this.write_recipients.get(m.message_id)) {
+                        node.tell(new Message.WriteContentMsg(m.key, value), getSelf());
+                    }
+
+                    recipient.tell(new MessageClient.UpdateResponseMsg(value.GetValue(), identity.id), getSelf());
+
+
+                    this.write_recipients.remove(m.message_id);
+                    this.write_responses.remove(m.message_id);
+                    // removing request because is completed
+                    this.write_requests.remove(m.message_id);
+                    // removing value because the update is completed
+                    this.update_values.remove(m.message_id);
+                }
+            }
+
+            // TODO remember to empty read_responses for this id so that if we don't get enough replies, it doesn't sit there forever
         }
     }
 
@@ -297,22 +362,45 @@ public class Node extends AbstractActor {
             } else { // Node is ready to write
 
                 // this node is the recipient
-                // we're deleting the write request from the relative map
+                // we're deleting the write request from the relative map as soon as W replies are received
+                // at that point, we're also sending a write confirmation
 
-                // deleting write request from map
-                Identifier identity = this.write_requests.get(m.message_id);
-                ActorRef recipient = identity.client;
-                String newValue = this.update_values.get(m.message_id);
+                if(this.write_responses.get(m.message_id) != null) {
 
-                m.value.SetValue(newValue, true);
-                getSender().tell(new Message.WriteContentMsg(m.key, m.value), getSelf());
-                recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+                    this.write_responses.get(m.message_id).add(m.value);
 
-                // removing request because is completed
-                this.write_requests.remove(m.message_id);
+                    // check if we have enough responses
+                    if(this.write_responses.get(m.message_id).size() == this.W) {
 
-                // removing value because the update is completed
-                this.update_values.remove(m.message_id);
+                        Identifier identity = this.write_requests.get(m.message_id);
+                        ActorRef recipient = identity.client;
+                        String newValue = this.update_values.get(m.message_id);
+
+                        DataEntry value = this.write_responses.get(m.message_id).get(0);
+                        for (DataEntry entry : write_responses.get(m.message_id)) {
+                            if (entry.IsOutdated(value)) {
+                                value = entry;
+                            }
+                        }
+
+                        value.SetValue(newValue, true);
+
+                        for(ActorRef r: write_recipients.get(m.message_id)) {
+                            r.tell(new Message.WriteContentMsg(m.key, value), getSelf());
+                        }
+
+                        recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+
+                        // removing request because is completed
+                        this.write_requests.remove(m.message_id);
+
+                        // removing value because the update is completed
+                        this.update_values.remove(m.message_id);
+
+                        this.write_recipients.remove(m.message_id);
+                        this.write_responses.remove(m.message_id);
+                }
+                    }
 
                 // TODO controlla che versione dato da inserire sia maggiore (per la replication)
             }
@@ -322,6 +410,7 @@ public class Node extends AbstractActor {
 
             // check if the available data is newer, in that case ignore (delete) other messages
             // if older, don't add it to list
+            /*
             int listSize = this.read_responses.get(m.message_id).size();
             for (DataEntry entry : this.read_responses.get(m.message_id)) {
                 if(entry.GetVersion() < m.value.GetVersion()) {
@@ -331,16 +420,33 @@ public class Node extends AbstractActor {
             if (listSize <= this.read_responses.get(m.message_id).size()) {
                 this.read_responses.get(m.message_id).add(m.value);
             }
+            */
 
-            // check if we have enough responses
-            if(this.read_responses.get(m.message_id).size() == this.R) {
-                // we have enough responses, we can forward the response to the client
-                Identifier identity = this.read_requests.get(m.message_id);
-                ActorRef recipient = identity.client;
-                DataEntry value = this.read_responses.get(m.message_id).get(0);
-                recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), getSelf());
-                this.read_requests.remove(m.message_id);
-                this.read_responses.remove(m.message_id);
+            System.out.println("Readresponses map size: " + this.read_responses.size());
+            if(this.read_responses.get(m.message_id) != null) {
+                this.read_responses.get(m.message_id).add(m.value);
+
+                System.out.println("Readresponses size: " + this.read_responses.get(m.message_id).size());
+
+                // check if we have enough responses
+                if(this.read_responses.get(m.message_id).size() == this.R) {
+
+                    // we have enough responses, we can forward the response to the client
+                    Identifier identity = this.read_requests.get(m.message_id);
+                    ActorRef recipient = identity.client;
+
+                    DataEntry value = this.read_responses.get(m.message_id).get(0);
+                    for (DataEntry entry : this.read_responses.get(m.message_id)) {
+                        if (entry.IsOutdated(value)) {
+                            value = entry;
+                        }
+                        System.out.println(value);
+                    }
+
+                    recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), getSelf());
+                    this.read_requests.remove(m.message_id);
+                    this.read_responses.remove(m.message_id);
+                }
             }
         }
     }
@@ -389,15 +495,28 @@ public class Node extends AbstractActor {
     // Node receives a write request
     private void OnUpdateRequest(MessageNode.UpdateRequestMsg m) {
 
-        ActorRef node = this.network.get(FindResponsible(m.key));
+
         Identifier identifier = new Identifier(m.msg_id, getSender());
         this.write_requests.put(this.counter, identifier);
         this.update_values.put(this.counter, m.value);
+        this.write_responses.put(this.counter, new ArrayList<>());
+        this.write_recipients.put(this.counter, new HashSet<>());
+
+        // Contact the nodes responsible for the key
+        if(network.size() < N) { //TODO questa cosa va pensata e sistemata
+            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+            holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+        } else {
+            for(ActorRef node : FindResponsibles(m.key)) {
+                System.out.println(node);
+                node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+                write_recipients.get(this.counter).add(node);
+            }
+        }
 
         // Set timeout
         SetTimeout(new MessageNode.WriteTimeoutMsg(getSender(), m.key, "Write time-out", this.counter));
 
-        node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
         this.counter += 1;
     }
 
@@ -522,6 +641,9 @@ public class Node extends AbstractActor {
         if(identity != null) {
             ActorRef recipient = identity.client;
             this.write_requests.remove(m.msg_id);
+            this.write_responses.remove(m.msg_id);
+            this.update_values.remove(m.msg_id);
+            this.write_recipients.remove(m.msg_id);
             recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
         }
     }
@@ -590,8 +712,10 @@ public class Node extends AbstractActor {
     // Find the nodes responsible for key k, use only if network size >= N
     private ActorRef[] FindResponsibles(Integer k) {
         ActorRef[] responsibles = new ActorRef[N];
-        responsibles[0] = this.network.get(FindResponsible(k));
-        int next = FindNext(k);
+        int firstResponsible = FindResponsible(k);
+        responsibles[0] = this.network.get(firstResponsible);
+
+        int next = FindNext(firstResponsible);
         for (int i=1; i<N; i++) {
             responsibles[i] = this.network.get(FindResponsible(next));
             next = FindNext(next);
@@ -633,11 +757,11 @@ public class Node extends AbstractActor {
 
         // Check if a data item with this key is already in the storage
         if(this.storage.containsKey(key)) {
-            if(this.storage.get(key).GetValue() != value.GetValue()) {
-                this.storage.get(key).SetValue(value.GetValue(), false);
+            if(this.storage.get(key).GetVersion() < value.GetVersion()) {
+                this.storage.put(key, value);
             }
         } else {
-            this.storage.put(key, new DataEntry(value.GetValue()));
+            this.storage.put(key, value);
         }
     }
 
