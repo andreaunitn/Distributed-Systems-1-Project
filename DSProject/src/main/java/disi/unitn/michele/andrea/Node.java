@@ -1,10 +1,8 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.PoisonPill;
+import akka.actor.*;
+import scala.Array;
 import scala.concurrent.duration.Duration;
-import akka.actor.AbstractActor;
-import akka.actor.ActorRef;
-import akka.actor.Props;
 
 import java.io.Serializable;
 import java.util.*;
@@ -123,9 +121,11 @@ public class Node extends AbstractActor {
                 .match(MessageNode.NetworkRequestMsg.class, this::OnNetworkRequest)
                 .match(MessageNode.DataRequestMsg.class, this::OnDataRequest)
 
+
                 // Responses
                 .match(MessageNode.DataResponseMsg.class, this::OnDataResponse)
                 .match(MessageNode.NetworkResponseMsg.class, this::OnNetworkResponse)
+                .match(MessageClient.GetResponseMsg.class, this::OnGetResponse)
 
                 // Timeouts
                 .match(MessageNode.ReadTimeoutMsg.class, this::OnReadTimeout)
@@ -177,7 +177,9 @@ public class Node extends AbstractActor {
 
         for(Integer k: m.storage.keySet()) {
             if(!this.isRecovering) {
-                getSender().tell(new Message.ReadRequestMsg(getSelf(), k, 0), getSelf());
+
+                getSender().tell(new MessageNode.GetRequestMsg(k, counter), getSelf());
+                this.counter += 1;
             }
         }
 
@@ -211,7 +213,14 @@ public class Node extends AbstractActor {
         HashSet<Integer> keySet = new HashSet<>(this.storage.keySet());
 
         for(Integer k : keySet) {
-            if(IsInInterval(m.key, this.key, k)) {
+
+            ArrayList<ActorRef> actors = FindResponsibles(k);
+            System.out.println("actors size: " + actors.size());
+            for(ActorRef actor: actors) {
+                System.out.println("Actor of find responsibles: " + actor);
+            }
+
+            if(!actors.contains(getSelf())) {
                 this.storage.remove(k);
             }
         }
@@ -340,76 +349,48 @@ public class Node extends AbstractActor {
     // Node performs read operation
     private void OnReadResponse(Message.ReadResponseMsg m) {
         // Node is the recipient of the message
-        if(m.recipient == getSelf()) {
+        if(write_requests.containsKey(m.message_id)) {
 
-            // Node is ready to join the network
-            if(this.isJoining) {
+            if(this.write_responses.get(m.message_id) != null) {
 
-                // Check data is OK
-                this.storage.put(m.key, m.value);
+                this.write_responses.get(m.message_id).add(m.value);
 
-                if(this.valuesToCheck > 0) {
-                    this.valuesToCheck--;
-                }
+                // check if we have enough responses
+                if(this.write_responses.get(m.message_id).size() == this.W) {
 
-                if(this.valuesToCheck == 0) {
+                    Identifier identity = this.write_requests.get(m.message_id);
+                    ActorRef recipient = identity.client;
+                    String newValue = this.update_values.get(m.message_id);
 
-                    // Node is ready, Multicast to every other nodes in the network
-                    Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
-                    this.isJoining = false;
-                }
-
-            } else { // Node is ready to write
-
-                // this node is the recipient
-                // we're deleting the write request from the relative map as soon as W replies are received
-                // at that point, we're also sending a write confirmation
-
-                if(this.write_responses.get(m.message_id) != null) {
-
-                    this.write_responses.get(m.message_id).add(m.value);
-
-                    // check if we have enough responses
-                    if(this.write_responses.get(m.message_id).size() == this.W) {
-
-                        Identifier identity = this.write_requests.get(m.message_id);
-                        ActorRef recipient = identity.client;
-                        String newValue = this.update_values.get(m.message_id);
-
-                        DataEntry value = this.write_responses.get(m.message_id).get(0);
-                        for (DataEntry entry : write_responses.get(m.message_id)) {
-                            if (entry.IsOutdated(value)) {
-                                value = entry;
-                            }
+                    DataEntry value = this.write_responses.get(m.message_id).get(0);
+                    for (DataEntry entry : write_responses.get(m.message_id)) {
+                        if (entry.IsOutdated(value)) {
+                            value = entry;
                         }
-
-                        value.SetValue(newValue, true);
-
-                        for(ActorRef r: write_recipients.get(m.message_id)) {
-                            r.tell(new Message.WriteContentMsg(m.key, value), getSelf());
-                        }
-
-                        recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
-
-                        // removing request because is completed
-                        this.write_requests.remove(m.message_id);
-
-                        // removing value because the update is completed
-                        this.update_values.remove(m.message_id);
-
-                        this.write_recipients.remove(m.message_id);
-                        this.write_responses.remove(m.message_id);
-                }
                     }
 
-                // TODO controlla che versione dato da inserire sia maggiore (per la replication)
-            }
-        } else {
-            // this node isn't the recipient but the client is
-            // we're forwarding the message and deleting the read request from the relative map
+                    value.SetValue(newValue, true);
 
-            // check if the available data is newer, in that case ignore (delete) other messages
-            // if older, don't add it to list
+                    for(ActorRef r: write_recipients.get(m.message_id)) {
+                        r.tell(new Message.WriteContentMsg(m.key, value), getSelf());
+                    }
+
+                    recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+
+                    // removing request because is completed
+                    this.write_requests.remove(m.message_id);
+
+                    // removing value because the update is completed
+                    this.update_values.remove(m.message_id);
+
+                    this.write_recipients.remove(m.message_id);
+                    this.write_responses.remove(m.message_id);
+                }
+            }
+
+        } else {
+
+            // we're trying to read a value
             /*
             int listSize = this.read_responses.get(m.message_id).size();
             for (DataEntry entry : this.read_responses.get(m.message_id)) {
@@ -447,6 +428,27 @@ public class Node extends AbstractActor {
                     this.read_requests.remove(m.message_id);
                     this.read_responses.remove(m.message_id);
                 }
+            }
+        }
+    }
+
+    // Node receives the read value through quorum (used for join)
+    private void OnGetResponse(MessageClient.GetResponseMsg m){
+        // Node is ready to join the network
+        if(this.isJoining) {
+
+            // Check data is OK
+            this.storage.put(m.key, m.entry);
+
+            if(this.valuesToCheck > 0) {
+                this.valuesToCheck--;
+            }
+
+            if(this.valuesToCheck == 0) {
+
+                // Node is ready, Multicast to every other nodes in the network
+                Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+                this.isJoining = false;
             }
         }
     }
@@ -710,14 +712,14 @@ public class Node extends AbstractActor {
     }
 
     // Find the nodes responsible for key k, use only if network size >= N
-    private ActorRef[] FindResponsibles(Integer k) {
-        ActorRef[] responsibles = new ActorRef[N];
+    private ArrayList<ActorRef> FindResponsibles(Integer k) {
+        ArrayList<ActorRef> responsibles = new ArrayList<>();
         int firstResponsible = FindResponsible(k);
-        responsibles[0] = this.network.get(firstResponsible);
+        responsibles.add(this.network.get(firstResponsible));
 
         int next = FindNext(firstResponsible);
         for (int i=1; i<N; i++) {
-            responsibles[i] = this.network.get(FindResponsible(next));
+            responsibles.add(this.network.get(FindResponsible(next)));
             next = FindNext(next);
         }
         return responsibles;
