@@ -4,6 +4,7 @@ import akka.actor.*;
 import scala.Array;
 import scala.concurrent.duration.Duration;
 
+import javax.xml.crypto.Data;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -25,7 +26,7 @@ public class Node extends AbstractActor {
     private boolean isJoining = false;
     private boolean isRecovering = false;
     private int valuesToCheck = 0;
-    private boolean canDie = false;
+    //private boolean canDie = false;
 
     // Counter to be used for message ids. Gets increased at every use
     private int counter = 0;
@@ -109,7 +110,7 @@ public class Node extends AbstractActor {
                 .match(Message.CrashRequestOrder.class, this::OnCrashRequestOrder)
                 //.match(Message.NetworkResponseMsg.class, this::OnNetworkResponseMsg)
                 .match(Message.ErrorMsg.class, this::OnError)
-                .match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
+                //.match(Message.PassDataItemResponseMsg.class, this::OnPassDataItemResponseMsg)
 
                 // New
                 // Join
@@ -131,7 +132,7 @@ public class Node extends AbstractActor {
                 .match(MessageNode.ReadTimeoutMsg.class, this::OnReadTimeout)
                 .match(MessageNode.WriteTimeoutMsg.class, this::OnWriteTimeout)
                 .match(MessageNode.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
-                .match(MessageNode.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
+                //.match(MessageNode.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
 
                 .build();
     }
@@ -214,13 +215,8 @@ public class Node extends AbstractActor {
 
         for(Integer k : keySet) {
 
-            ArrayList<ActorRef> actors = FindResponsibles(k);
-            System.out.println("actors size: " + actors.size());
-            for(ActorRef actor: actors) {
-                System.out.println("Actor of find responsibles: " + actor);
-            }
-
-            if(!actors.contains(getSelf())) {
+            ArrayList<Integer> actors = FindResponsibles(k);
+            if(!actors.contains(this.key)) {
                 this.storage.remove(k);
             }
         }
@@ -238,8 +234,8 @@ public class Node extends AbstractActor {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key));
             holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
         } else {
-            for(ActorRef node : FindResponsibles(m.key)) {
-                System.out.println(node);
+            for(Integer k : FindResponsibles(m.key)) {
+                ActorRef node = this.network.get(k);
                 node.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
             }
         }
@@ -456,31 +452,43 @@ public class Node extends AbstractActor {
     // Node receives the command to leave the network
     private void OnLeaveOrder(Message.LeaveNetworkOrder m) {
 
-        // Get neighbor key
-        Integer neighborKey = FindNext();
+        // Removing the node that wants to leave the network
+        this.network.remove(this.key);
 
-        if(neighborKey != this.key) {
-            ActorRef node = this.network.get(neighborKey);
+        // Aggregate for each replica the data to be sent
+        HashMap<Integer, HashMap<Integer, DataEntry>> storages_for_each_replica = new HashMap<>();
 
-            // Contact neighbor and pass data items
-            node.tell(new Message.PassDataItemsMsg(this.storage), getSelf());
+        for(Integer key: this.storage.keySet()) {
+            ArrayList<Integer> replicas = FindResponsibles(key);
+            for(Integer replica : replicas) {
+                if(storages_for_each_replica.get(replica) == null) {
+                    storages_for_each_replica.put(replica, new HashMap<>());
+                }
+                storages_for_each_replica.get(replica).put(key, this.storage.get(key));
+            }
         }
 
-        // SetTimeout
-        SetTimeout(new MessageNode.PassDataTimeoutMsg(neighborKey));
+        // Contact each replica
+        for(Integer replica : storages_for_each_replica.keySet()) {
+            this.network.get(replica).tell(new Message.PassDataItemsMsg(storages_for_each_replica.get(replica)), getSelf());
+        }
+
+        // Multicast every node in the network
+        Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
+        //this.canDie = true;
     }
 
     // Node includes receiving items to its storage
     private void OnPassDataItems(Message.PassDataItemsMsg m) {
-        this.storage.putAll(m.storage);
-        getSender().tell(new Message.PassDataItemResponseMsg(this.key), getSelf());
+        InsertAllData(m.storage);
+        //getSender().tell(new Message.PassDataItemResponseMsg(this.key), getSelf());
     }
 
-    private void OnPassDataItemResponseMsg(Message.PassDataItemResponseMsg m) {
+    /*private void OnPassDataItemResponseMsg(Message.PassDataItemResponseMsg m) {
         // Multicast everyone
         Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
         this.canDie = true;
-    }
+    }*/
 
     // Removes the leaving node from the network
     private void OnNodeLeave(Message.NodeLeaveMsg m) {
@@ -508,9 +516,10 @@ public class Node extends AbstractActor {
         if(network.size() < N) { //TODO questa cosa va pensata e sistemata
             ActorRef holdingNode = this.network.get(FindResponsible(m.key));
             holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+
         } else {
-            for(ActorRef node : FindResponsibles(m.key)) {
-                System.out.println(node);
+            for(Integer k : FindResponsibles(m.key)) {
+                ActorRef node = this.network.get(k);
                 node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
                 write_recipients.get(this.counter).add(node);
             }
@@ -712,14 +721,14 @@ public class Node extends AbstractActor {
     }
 
     // Find the nodes responsible for key k, use only if network size >= N
-    private ArrayList<ActorRef> FindResponsibles(Integer k) {
-        ArrayList<ActorRef> responsibles = new ArrayList<>();
+    private ArrayList<Integer> FindResponsibles(Integer k) {
+        ArrayList<Integer> responsibles = new ArrayList<>();
         int firstResponsible = FindResponsible(k);
-        responsibles.add(this.network.get(firstResponsible));
+        responsibles.add(firstResponsible);
 
         int next = FindNext(firstResponsible);
         for (int i=1; i<N; i++) {
-            responsibles.add(this.network.get(FindResponsible(next)));
+            responsibles.add(FindResponsible(next));
             next = FindNext(next);
         }
         return responsibles;
@@ -754,7 +763,7 @@ public class Node extends AbstractActor {
         }
     }
 
-    // Put data in the storage
+    // Put data in the storage (if not outdated)
     private void InsertData(Integer key, DataEntry value) {
 
         // Check if a data item with this key is already in the storage
@@ -764,6 +773,13 @@ public class Node extends AbstractActor {
             }
         } else {
             this.storage.put(key, value);
+        }
+    }
+
+    // Put collection of data in the storage (if not outdated)
+    private void InsertAllData(Map<Integer, DataEntry> data) {
+        for(Integer key: data.keySet()) {
+            InsertData(key, data.get(key));
         }
     }
 
@@ -793,7 +809,7 @@ public class Node extends AbstractActor {
         }
     }
 
-    public void OnPassDataTimeoutMsg(MessageNode.PassDataTimeoutMsg m) {
+    /*public void OnPassDataTimeoutMsg(MessageNode.PassDataTimeoutMsg m) {
 
         if(this.canDie) {
             getSelf().tell(PoisonPill.getInstance(), ActorRef.noSender());
@@ -813,7 +829,7 @@ public class Node extends AbstractActor {
             // Timeout
             SetTimeout(new MessageNode.PassDataTimeoutMsg(neighborKey));
         }
-    }
+    }*/
 
     private void SetTimeout(MessageNode.BaseTimeout m) {
         SetTimeout(m, T);

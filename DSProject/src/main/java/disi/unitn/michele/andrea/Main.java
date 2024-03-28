@@ -22,7 +22,7 @@ public class Main {
         System.out.println("Welcome to our Distributed Systems 1 Project!");
 
         //int N=3, R=2, W=2;
-        int N=3, R=2, W=2;
+        int N=2, R=2, W=2;
         int T=200;
         
         System.out.println("Network Initialized");
