@@ -44,7 +44,7 @@ public class MessageClient {
         public GetResponseMsg(ActorRef recipient_node, int key, DataEntry entry, int msg_id) {
             this.recipient_node = recipient_node;
             this.key = key;
-            this.entry = entry;
+            this.entry = new DataEntry(entry.GetValue(), entry.GetVersion());
             this.msg_id = msg_id;
         }
     }

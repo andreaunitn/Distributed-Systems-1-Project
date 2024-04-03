@@ -1,10 +1,8 @@
 package disi.unitn.michele.andrea;
 
 import akka.actor.*;
-import scala.Array;
 import scala.concurrent.duration.Duration;
 
-import javax.xml.crypto.Data;
 import java.io.Serializable;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
@@ -339,6 +337,7 @@ public class Node extends AbstractActor {
 
     // Put the received data in the storage
     private void OnWriteContentMsg(Message.WriteContentMsg m) {
+        System.out.println("WriteContentMsg, key: " + this.key);
         InsertData(m.key, m.data);
     }
 
@@ -505,7 +504,6 @@ public class Node extends AbstractActor {
     // Node receives a write request
     private void OnUpdateRequest(MessageNode.UpdateRequestMsg m) {
 
-
         Identifier identifier = new Identifier(m.msg_id, getSender());
         this.write_requests.put(this.counter, identifier);
         this.update_values.put(this.counter, m.value);
@@ -556,7 +554,7 @@ public class Node extends AbstractActor {
         getSender().tell(new MessageNode.NetworkResponseMsg(this.network), getSelf());
     }
 
-    // Node begins recovery protocol by asking other nodes the data items
+    // Node asks other nodes the data items
     private void OnNetworkResponse(MessageNode.NetworkResponseMsg m) {
 
         // Send the network to the joining node

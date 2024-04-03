@@ -1,6 +1,8 @@
 package disi.unitn.michele.andrea;
 
-public class DataEntry {
+import java.io.Serializable;
+
+public class DataEntry implements Serializable {
 
     private String value;
     private int version;

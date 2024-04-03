@@ -2,6 +2,7 @@ package disi.unitn.michele.andrea;
 
 import akka.actor.ActorRef;
 
+import javax.xml.crypto.Data;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
 import java.io.Serializable;
@@ -142,7 +143,7 @@ public class Message {
         public ReadResponseMsg(ActorRef recipient, Integer key, DataEntry value, int message_id) {
             this.recipient = recipient;
             this.key = key;
-            this.value = value;
+            this.value = new DataEntry(value.GetValue(), value.GetVersion());
             this.message_id = message_id;
          }
     }
@@ -192,7 +193,7 @@ public class Message {
         public final DataEntry data;
         public WriteContentMsg(Integer key, DataEntry data) {
             this.key = key;
-            this.data = data;
+            this.data = new DataEntry(data.GetValue(), data.GetVersion());
         }
     }
 
@@ -236,7 +237,7 @@ public class Message {
         public ErrorNoValueFound(String msg, ActorRef readSender, Integer key, DataEntry data, int message_id) {
             super(msg);
             this.readSender = readSender;
-            this.data = data;
+            this.data = new DataEntry(data.GetValue(), data.GetVersion());
             this.key = key;
             this.message_id = message_id;
         }
