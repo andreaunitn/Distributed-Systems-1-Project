@@ -578,12 +578,40 @@ public class Node extends AbstractActor {
             // Contact neighbor and request data
             node.tell(data_request, getSelf());
 
-        } else if(this.isRecovering) { // Send the network to the node that wants to recover
+        } else if(this.isRecovering) {
 
             // Update my network
             this.network.clear();
             this.network.putAll(m.network);
 
+            // A chi chiedo i dati? Alle repliche
+            // Come identifico le repliche avendo solo la topologia della rete? contatto il prossimo e il precedente
+            // A quel punto per ogni dato che ricevo identifico le repliche e le contatto.
+            // DA DEFINIRE COME CONTATTATRE LE REPLICHE
+
+            // Find predecessor and next nodes
+            // TODO: WHAT HAPPENS IF ONE OR BOTH THE NODES ARE ALSO CRASHED?
+            //Integer prececessor = FindPredecessor(this.key);
+            //Integer next = FindNext(this.key);
+
+            //
+
+            // Find neighbor
+            Integer neighborKey = FindNext();
+            ActorRef node = this.network.get(neighborKey);
+
+            // Creating a new data request
+            MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
+            this.counter += 1;
+            this.data_requests.add(data_request.msg_id);
+
+            // Set timeout
+            SetTimeout(new MessageNode.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
+
+            // Contact neighbor and request data
+            node.tell(data_request, getSelf());
+
+            /*
             // Forgets items it is no longer responsible for
             HashSet<Integer> keySet = new HashSet<>(this.storage.keySet());
 
@@ -607,6 +635,7 @@ public class Node extends AbstractActor {
 
             // Request items we are responsible for
             this.network.get(nextKey).tell(data_request, getSelf());
+             */
         }
     }
 
