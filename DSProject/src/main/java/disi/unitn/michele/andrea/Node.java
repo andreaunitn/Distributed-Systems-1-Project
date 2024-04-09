@@ -1,11 +1,15 @@
 package disi.unitn.michele.andrea;
 
 import akka.actor.*;
+import scala.Int;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
+import java.io.UTFDataFormatException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
+
+//TODO: fai in modo che tutto vada anche prima che il numero di nodi sia >= al numero di repliche
 
 public class Node extends AbstractActor {
 
@@ -55,6 +59,9 @@ public class Node extends AbstractActor {
     
     // Contains the ids of sent data requests of which I still haven't received an answer
     private HashSet<Integer> data_requests;
+
+    // Checks if the first of the two recovery responses has arrived
+    private boolean firstRecoveryResponseArrived = false;
 
     // Values for replication: N=number of copies of some data, W=write quorum, R=read quorum
     private int N;
@@ -154,12 +161,14 @@ public class Node extends AbstractActor {
 
         // Filter data to be sent to the node
         HashMap<Integer, DataEntry> data_to_be_sent = new HashMap<>();
+        HashMap<Integer, ActorRef> custom_network = new HashMap<>(this.network);
+        custom_network.put(m.key, getSender());
 
         for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
             Integer k = entry.getKey();
             DataEntry v = entry.getValue();
 
-            if(IsInInterval(m.key, this.key, k)) {
+            if(FindResponsibles(k, custom_network).contains(m.key)) {
                 data_to_be_sent.put(k, v);
             }
         }
@@ -175,11 +184,8 @@ public class Node extends AbstractActor {
         this.storage.putAll(m.storage);
 
         for(Integer k: m.storage.keySet()) {
-            if(!this.isRecovering) {
-
-                getSender().tell(new MessageNode.GetRequestMsg(k, counter), getSelf());
-                this.counter += 1;
-            }
+            getSender().tell(new MessageNode.GetRequestMsg(k, counter), getSelf());
+            this.counter += 1;
         }
 
         // Joining Phase
@@ -198,10 +204,17 @@ public class Node extends AbstractActor {
         // Recovering phase
         if(this.isRecovering) {
 
-            boolean foundAndRemoved = this.data_requests.remove(m.msg_id);
-            if(foundAndRemoved) {
-                this.isRecovering = false;
-                getSender().tell(new Message.NodeAnnounceMsg(this.key), getSelf());
+            if(!this.firstRecoveryResponseArrived) {
+                firstRecoveryResponseArrived = true;
+            } else {
+                // Request removed because is completed
+                this.data_requests.remove(m.msg_id);
+
+                // The node has sent an empty storage and can join the network
+                if(this.valuesToCheck == 0) {
+                    Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+                    this.isRecovering = false;
+                }
             }
         }
     }
@@ -229,7 +242,7 @@ public class Node extends AbstractActor {
 
         // Contact the nodes responsible for the key
         if(network.size() < N) {
-            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+            ActorRef holdingNode = this.network.get(FindResponsible(m.key, this.network));
             holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
         } else {
             for(Integer k : FindResponsibles(m.key)) {
@@ -433,7 +446,7 @@ public class Node extends AbstractActor {
         if(this.isJoining) {
 
             // Check data is OK
-            this.storage.put(m.key, m.entry);
+            InsertData(m.key, m.entry);
 
             if(this.valuesToCheck > 0) {
                 this.valuesToCheck--;
@@ -444,6 +457,23 @@ public class Node extends AbstractActor {
                 // Node is ready, Multicast to every other nodes in the network
                 Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
                 this.isJoining = false;
+            }
+        }
+
+        if(this.isRecovering) {
+
+            // Check data is OK
+            InsertData(m.key, m.entry);
+
+            if(this.valuesToCheck > 0) {
+                this.valuesToCheck--;
+            }
+
+            if(this.valuesToCheck == 0) {
+
+                // Node is ready, Multicast to every other nodes in the network
+                Multicast(new Message.NodeAnnounceMsg(this.key), new HashSet<>(this.network.values()));
+                this.isRecovering = false;
             }
         }
     }
@@ -512,7 +542,7 @@ public class Node extends AbstractActor {
 
         // Contact the nodes responsible for the key
         if(network.size() < N) { //TODO questa cosa va pensata e sistemata
-            ActorRef holdingNode = this.network.get(FindResponsible(m.key));
+            ActorRef holdingNode = this.network.get(FindResponsible(m.key, this.network));
             holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
 
         } else {
@@ -596,20 +626,41 @@ public class Node extends AbstractActor {
 
             //
 
-            // Find neighbor
-            Integer neighborKey = FindNext();
-            ActorRef node = this.network.get(neighborKey);
+            // Find next and prev nodes
+            Integer nextNodeKey = FindNext();
+            Integer prevNodeKey = FindPredecessor();
+            ActorRef nextNode = this.network.get(nextNodeKey);
+            ActorRef prevNode = this.network.get(prevNodeKey);
 
-            // Creating a new data request
+            // Creating 2 new data requests
             MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
-            this.counter += 1;
             this.data_requests.add(data_request.msg_id);
+            MessageNode.DataRequestMsg data_request_2 = new MessageNode.DataRequestMsg(this.key, this.counter);
+            this.data_requests.add(data_request_2.msg_id);
+            this.counter += 1;
 
             // Set timeout
-            SetTimeout(new MessageNode.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
+            SetTimeout(new MessageNode.NeighborTimeoutMsg(nextNode, nextNodeKey, data_request.msg_id));
 
-            // Contact neighbor and request data
-            node.tell(data_request, getSelf());
+            // Contact nodes and request data
+            nextNode.tell(data_request, getSelf());
+            prevNode.tell(data_request_2, getSelf());
+
+            HashSet<Integer> data_to_be_deleted = new HashSet<>();
+
+            // Filter data to be deleted
+            for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
+                Integer k = entry.getKey();
+
+                if(!FindResponsibles(k).contains(this.key)) {
+                    data_to_be_deleted.add(k);
+                }
+            }
+
+            // Actually remove data
+            for(Integer i : data_to_be_deleted) {
+                this.storage.remove(i);
+            }
 
             /*
             // Forgets items it is no longer responsible for
@@ -690,10 +741,10 @@ public class Node extends AbstractActor {
     // Functions to find the correct node to which send data
     
     // Find the node for key k
-    private Integer FindNext(Integer k) {
+    private Integer FindNext(Integer k, HashMap<Integer, ActorRef> custom_network) {
         Integer neighborKey;
 
-        Set<Integer> keySet = this.network.keySet();
+        Set<Integer> keySet = custom_network.keySet();
         ArrayList<Integer> keyList = new ArrayList<>(keySet);
         Collections.sort(keyList);
 
@@ -711,7 +762,7 @@ public class Node extends AbstractActor {
 
     // Wrapper
     private Integer FindNext() {
-        return FindNext(this.key);
+        return FindNext(this.key, this.network);
     }
 
     // Find the predecessor node with key k
@@ -739,24 +790,30 @@ public class Node extends AbstractActor {
     }
 
     // Find the node responsible for key k
-    private Integer FindResponsible(Integer k) {
-        if(this.network.containsKey(k)) {
+    private Integer FindResponsible(Integer k, HashMap<Integer, ActorRef> custom_network) {
+        if(custom_network.containsKey(k)) {
             return k;
         } else {
-            return FindNext(k);
+            return FindNext(k, custom_network);
         }
     }
 
     // Find the nodes responsible for key k, use only if network size >= N
     private ArrayList<Integer> FindResponsibles(Integer k) {
+        return FindResponsibles(k, this.network);
+    }
+
+    // Find the nodes responsible for key k, use only if network size >= N
+    private ArrayList<Integer> FindResponsibles(Integer k, HashMap<Integer, ActorRef> custom_network) {
+
         ArrayList<Integer> responsibles = new ArrayList<>();
-        int firstResponsible = FindResponsible(k);
+        int firstResponsible = FindResponsible(k, custom_network);
         responsibles.add(firstResponsible);
 
-        int next = FindNext(firstResponsible);
+        int next = FindNext(firstResponsible, custom_network);
         for (int i=1; i<N; i++) {
-            responsibles.add(FindResponsible(next));
-            next = FindNext(next);
+            responsibles.add(FindResponsible(next, custom_network));
+            next = FindNext(next, custom_network);
         }
         return responsibles;
     }
@@ -814,9 +871,13 @@ public class Node extends AbstractActor {
 
         boolean foundAndRemoved = this.data_requests.remove(m.message_id);
         if(foundAndRemoved) {
-            ActorRef neighbor = this.network.get(FindNext(m.key));
+            System.err.println("Cannot contact node");
+            System.err.println();
+            this.firstRecoveryResponseArrived = false;
 
-            // Creating a new data request
+            //ActorRef neighbor = this.network.get(FindNext(m.key));
+
+            /* Creating a new data request
             MessageNode.DataRequestMsg data_request = new MessageNode.DataRequestMsg(this.key, this.counter);
             this.counter += 1;
 
@@ -833,6 +894,8 @@ public class Node extends AbstractActor {
             } else {
                 System.out.println("There are no other nodes alive in the network");
             }
+
+            */
         }
     }
 
