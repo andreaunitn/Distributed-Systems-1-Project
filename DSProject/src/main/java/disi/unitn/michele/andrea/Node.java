@@ -1,15 +1,13 @@
 package disi.unitn.michele.andrea;
 
 import akka.actor.*;
-import scala.Int;
 import scala.concurrent.duration.Duration;
 
 import java.io.Serializable;
-import java.io.UTFDataFormatException;
 import java.util.*;
 import java.util.concurrent.TimeUnit;
 
-//TODO: fai in modo che tutto vada anche prima che il numero di nodi sia >= al numero di repliche
+//TODO: N.B. assumiamo ci siano almeno N nodi nella rete
 
 public class Node extends AbstractActor {
 
@@ -28,7 +26,6 @@ public class Node extends AbstractActor {
     private boolean isJoining = false;
     private boolean isRecovering = false;
     private int valuesToCheck = 0;
-    //private boolean canDie = false;
 
     // Counter to be used for message ids. Gets increased at every use
     private int counter = 0;
@@ -71,6 +68,9 @@ public class Node extends AbstractActor {
     // Timeout value in ms
     private int T;
 
+    // Hashmap to control which client requested an operation on a key
+    private HashMap<Integer, ActorRef> locks;
+
     public Node(Integer key, int N, int R, int W, int T) {
         this.key = key;
         this.rnd = new Random();
@@ -88,6 +88,7 @@ public class Node extends AbstractActor {
         this.R = R;
         this.W = W;
         this.T = T;
+        this.locks = new HashMap<>();
     }
 
     static public Props props(Integer key, int N, int R, int W, int T) {
@@ -138,6 +139,9 @@ public class Node extends AbstractActor {
                 .match(MessageNode.WriteTimeoutMsg.class, this::OnWriteTimeout)
                 .match(MessageNode.NeighborTimeoutMsg.class, this::OnNeighborTimeout)
                 //.match(MessageNode.PassDataTimeoutMsg.class, this::OnPassDataTimeoutMsg)
+
+                // Utility
+                .match(MessageNode.ReleaseLockMsg.class, this::OnReleaseLock)
 
                 .build();
     }
@@ -233,7 +237,6 @@ public class Node extends AbstractActor {
         }
     }
 
-
     // TODO: ripartisci oppurtonamente i compiti di OnReadRequest e OnGetRequest
     private void OnGetRequest(MessageNode.GetRequestMsg m) {
 
@@ -258,10 +261,17 @@ public class Node extends AbstractActor {
 
     // Node accepts read request
     private void OnReadRequest(Message.ReadRequestMsg m) {
-        if(this.storage.containsKey(m.key)) {
-            getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, storage.get(m.key), m.message_id), getSelf());
-        } else {
-            getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, new DataEntry(null, -1), m.message_id), getSelf());
+        if (this.locks.get(m.key) == null) {
+            if (m.is_write) {
+                // Granting a lock for the resource if we want to perform a write operation
+                this.locks.put(m.key, m.sender);
+            }
+
+            if (this.storage.containsKey(m.key)) {
+                getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.message_id), getSelf());
+            } else {
+                getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, new DataEntry(null, -1), m.message_id), getSelf());
+            }
         }
     }
 
@@ -352,6 +362,9 @@ public class Node extends AbstractActor {
     private void OnWriteContentMsg(Message.WriteContentMsg m) {
         System.out.println("WriteContentMsg, key: " + this.key);
         InsertData(m.key, m.data);
+
+        // Removing lock for the resource
+        this.locks.remove(m.key);
     }
 
     // Node performs read operation
@@ -504,7 +517,7 @@ public class Node extends AbstractActor {
 
         // Multicast every node in the network
         Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
-        //this.canDie = true;
+        getSelf().tell(PoisonPill.getInstance(), ActorRef.noSender());
     }
 
     // Node includes receiving items to its storage
@@ -541,14 +554,14 @@ public class Node extends AbstractActor {
         this.write_recipients.put(this.counter, new HashSet<>());
 
         // Contact the nodes responsible for the key
-        if(network.size() < N) { //TODO questa cosa va pensata e sistemata
+        if(network.size() < N) {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key, this.network));
-            holdingNode.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+            holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), getSelf());
 
         } else {
             for(Integer k : FindResponsibles(m.key)) {
                 ActorRef node = this.network.get(k);
-                node.tell(new Message.ReadRequestMsg(getSelf(), m.key, this.counter), getSelf());
+                node.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), getSelf());
                 write_recipients.get(this.counter).add(node);
             }
         }
@@ -728,12 +741,26 @@ public class Node extends AbstractActor {
         Identifier identity = this.write_requests.get(m.msg_id);
 
         if(identity != null) {
+
             ActorRef recipient = identity.client;
+
+            // Contact replicas to release the lock
+            for(ActorRef replica: this.write_recipients.get(m.msg_id)) {
+                replica.tell(new MessageNode.ReleaseLockMsg(m.key, recipient), getSelf());
+            }
+
             this.write_requests.remove(m.msg_id);
             this.write_responses.remove(m.msg_id);
             this.update_values.remove(m.msg_id);
             this.write_recipients.remove(m.msg_id);
             recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
+        }
+    }
+
+    // The node release the lock on the resource
+    private void OnReleaseLock(MessageNode.ReleaseLockMsg m) {
+        if(this.locks.get(m.key) == m.client) {
+            this.locks.remove(m.key);
         }
     }
     

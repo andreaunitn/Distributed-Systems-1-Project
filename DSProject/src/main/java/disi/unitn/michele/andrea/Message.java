@@ -118,11 +118,20 @@ public class Message {
         public final ActorRef sender;
         public final Integer key;
         public final int message_id;
+        public final boolean is_write;
 
         public ReadRequestMsg(ActorRef sender, Integer key, int message_id) {
             this.sender = sender;
             this.key = key;
             this.message_id = message_id;
+            this.is_write = false;
+        }
+
+        public ReadRequestMsg(ActorRef sender, Integer key, int message_id, boolean is_write) {
+            this.sender = sender;
+            this.key = key;
+            this.message_id = message_id;
+            this.is_write = is_write;
         }
 
         public ReadRequestMsg(ActorRef sender, Integer key) {
@@ -132,6 +141,7 @@ public class Message {
             DateFormat dateFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss.SSS");
             Date date = new Date();
             this.message_id = (dateFormat.format(date) + this.sender.toString()).hashCode();
+            this.is_write = false;
         }
     }
 

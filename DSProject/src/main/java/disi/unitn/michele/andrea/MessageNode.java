@@ -1,5 +1,6 @@
 package disi.unitn.michele.andrea;
 
+import akka.actor.Actor;
 import akka.actor.ActorRef;
 
 import java.io.Serializable;
@@ -134,4 +135,14 @@ public class MessageNode {
 
     ////////////////////
     // Utility
+
+    public static class ReleaseLockMsg implements Serializable {
+        public final int key;
+        public final ActorRef client;
+
+        public ReleaseLockMsg(int key, ActorRef client) {
+            this.key = key;
+            this.client = client;
+        }
+    }
 }

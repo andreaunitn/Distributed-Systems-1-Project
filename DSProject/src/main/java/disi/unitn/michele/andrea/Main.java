@@ -21,7 +21,7 @@ public class Main {
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
 
-        int N=3, R=2, W=2;
+        int N=1, R=1, W=1;
         //int N=2, R=2, W=2;
         int T=200;
         
@@ -115,7 +115,7 @@ public class Main {
                     System.out.print("\t Key: ");
                     int k = in.nextInt();
 
-                    while(!ring.hash_table.containsKey(k) && !ring.available_nodes.contains(ring.hash_table.get(k))) {
+                    while(!ring.hash_table.containsKey(k) || !ring.available_nodes.contains(ring.hash_table.get(k))) {
                         System.out.println("\t No node to delete with the specified key (might be in crashed state)");
                         System.out.print("\t Key: ");
                         k = in.nextInt();
