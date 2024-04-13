@@ -158,7 +158,7 @@ public class Node extends AbstractActor {
     // New node contacts bootstrapper
     private void OnJoinSystem(MessageNode.JoinSystemMsg m) {
         this.isJoining = true;
-        m.bootstrap_node.tell(new MessageNode.NetworkRequestMsg(), getSelf());
+        sendMsg(new MessageNode.NetworkRequestMsg(), m.bootstrap_node, getSelf());
     }
 
     private void OnDataRequest(MessageNode.DataRequestMsg m) {
@@ -178,7 +178,7 @@ public class Node extends AbstractActor {
         }
 
         // Send response
-        getSender().tell(new MessageNode.DataResponseMsg(data_to_be_sent, this.key, m.msg_id), getSelf());
+        sendMsg(new MessageNode.DataResponseMsg(data_to_be_sent, this.key, m.msg_id), getSender(), getSelf());
     }
 
     private void OnDataResponse(MessageNode.DataResponseMsg m) {
@@ -188,7 +188,7 @@ public class Node extends AbstractActor {
         this.storage.putAll(m.storage);
 
         for(Integer k: m.storage.keySet()) {
-            getSender().tell(new MessageNode.GetRequestMsg(k, counter), getSelf());
+            sendMsg(new MessageNode.GetRequestMsg(k, counter), getSender(), getSelf());
             this.counter += 1;
         }
 
@@ -246,11 +246,11 @@ public class Node extends AbstractActor {
         // Contact the nodes responsible for the key
         if(network.size() < N) {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key, this.network));
-            holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
+            sendMsg(new Message.ReadRequestMsg(getSender(), m.key, this.counter), holdingNode, getSelf());
         } else {
             for(Integer k : FindResponsibles(m.key)) {
                 ActorRef node = this.network.get(k);
-                node.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter), getSelf());
+                sendMsg(new Message.ReadRequestMsg(getSender(), m.key, this.counter), node, getSelf());
             }
         }
 
@@ -268,9 +268,9 @@ public class Node extends AbstractActor {
             }
 
             if (this.storage.containsKey(m.key)) {
-                getSender().tell(new Message.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.message_id), getSelf());
+                sendMsg(new Message.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.message_id), getSender(), getSelf());
             } else {
-                getSender().tell(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, new DataEntry(null, -1), m.message_id), getSelf());
+                sendMsg(new Message.ErrorNoValueFound("No value found for the requested key", m.sender, m.key, new DataEntry(null, -1), m.message_id), getSender(), getSelf());
             }
         }
     }
@@ -299,9 +299,9 @@ public class Node extends AbstractActor {
                     }
 
                     if(value.GetVersion() == -1) {
-                        identity.client.tell(new MessageClient.PrintErrorMsg("cannot read value for key: " + m.key), getSelf());
+                        sendMsg(new MessageClient.PrintErrorMsg("cannot read value for key: " + m.key), identity.client, getSelf());
                     } else {
-                        recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), getSelf());
+                        sendMsg(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), recipient, getSelf());
                     }
 
                     this.read_requests.remove(m.message_id);
@@ -339,10 +339,10 @@ public class Node extends AbstractActor {
                     System.out.println("Write recipients size: " + write_recipients.get(m.message_id).size());
                     // send new value to the nodes that should hold the value
                     for(ActorRef node : this.write_recipients.get(m.message_id)) {
-                        node.tell(new Message.WriteContentMsg(m.key, value), getSelf());
+                        sendMsg(new Message.WriteContentMsg(m.key, value), node, getSelf());
                     }
 
-                    recipient.tell(new MessageClient.UpdateResponseMsg(value.GetValue(), identity.id), getSelf());
+                    sendMsg(new MessageClient.UpdateResponseMsg(value.GetValue(), identity.id), recipient, getSelf());
 
 
                     this.write_recipients.remove(m.message_id);
@@ -393,10 +393,10 @@ public class Node extends AbstractActor {
                     value.SetValue(newValue, true);
 
                     for(ActorRef r: write_recipients.get(m.message_id)) {
-                        r.tell(new Message.WriteContentMsg(m.key, value), getSelf());
+                        sendMsg(new Message.WriteContentMsg(m.key, value), r, getSelf());
                     }
 
-                    recipient.tell(new MessageClient.UpdateResponseMsg(newValue, identity.id), getSelf());
+                    sendMsg(new MessageClient.UpdateResponseMsg(newValue, identity.id), recipient, getSelf());
 
                     // removing request because is completed
                     this.write_requests.remove(m.message_id);
@@ -445,7 +445,7 @@ public class Node extends AbstractActor {
                         System.out.println(value);
                     }
 
-                    recipient.tell(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), getSelf());
+                    sendMsg(new MessageClient.GetResponseMsg(recipient, m.key, value, identity.id), recipient, getSelf());
                     this.read_requests.remove(m.message_id);
                     this.read_responses.remove(m.message_id);
                 }
@@ -512,12 +512,12 @@ public class Node extends AbstractActor {
 
         // Contact each replica
         for(Integer replica : storages_for_each_replica.keySet()) {
-            this.network.get(replica).tell(new Message.PassDataItemsMsg(storages_for_each_replica.get(replica)), getSelf());
+            sendMsg(new Message.PassDataItemsMsg(storages_for_each_replica.get(replica)), this.network.get(replica), getSelf());
         }
 
         // Multicast every node in the network
         Multicast(new Message.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
-        getSelf().tell(PoisonPill.getInstance(), ActorRef.noSender());
+        sendMsg(PoisonPill.getInstance(), getSelf(), ActorRef.noSender());
     }
 
     // Node includes receiving items to its storage
@@ -556,12 +556,11 @@ public class Node extends AbstractActor {
         // Contact the nodes responsible for the key
         if(network.size() < N) {
             ActorRef holdingNode = this.network.get(FindResponsible(m.key, this.network));
-            holdingNode.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), getSelf());
-
+            sendMsg(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), holdingNode, getSelf());
         } else {
             for(Integer k : FindResponsibles(m.key)) {
                 ActorRef node = this.network.get(k);
-                node.tell(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), getSelf());
+                sendMsg(new Message.ReadRequestMsg(getSender(), m.key, this.counter, true), node, getSelf());
                 write_recipients.get(this.counter).add(node);
             }
         }
@@ -584,7 +583,7 @@ public class Node extends AbstractActor {
 
         if(m.node != null) {
             // Contact bootstrapper node for recovery
-            m.node.tell(new MessageNode.NetworkRequestMsg(), getSelf());
+            sendMsg(new MessageNode.NetworkRequestMsg(), m.node, getSelf());
         }
 
         getContext().become(onlineBehavior());
@@ -594,7 +593,7 @@ public class Node extends AbstractActor {
 
     // Tell node to begin recovery procedure
     private void OnNetworkRequest(MessageNode.NetworkRequestMsg m) {
-        getSender().tell(new MessageNode.NetworkResponseMsg(this.network), getSelf());
+        sendMsg(new MessageNode.NetworkResponseMsg(this.network), getSender(), getSelf());
     }
 
     // Node asks other nodes the data items
@@ -619,7 +618,7 @@ public class Node extends AbstractActor {
             SetTimeout(new MessageNode.NeighborTimeoutMsg(node, neighborKey, data_request.msg_id));
 
             // Contact neighbor and request data
-            node.tell(data_request, getSelf());
+            sendMsg(data_request, node, getSelf());
 
         } else if(this.isRecovering) {
 
@@ -656,8 +655,8 @@ public class Node extends AbstractActor {
             SetTimeout(new MessageNode.NeighborTimeoutMsg(nextNode, nextNodeKey, data_request.msg_id));
 
             // Contact nodes and request data
-            nextNode.tell(data_request, getSelf());
-            prevNode.tell(data_request_2, getSelf());
+            sendMsg(data_request, nextNode, getSelf());
+            sendMsg(data_request_2, prevNode, getSelf());
 
             HashSet<Integer> data_to_be_deleted = new HashSet<>();
 
@@ -731,7 +730,7 @@ public class Node extends AbstractActor {
             ActorRef recipient = identity.client;
             this.read_requests.remove(m.msg_id);
             this.read_responses.remove(m.msg_id);
-            recipient.tell(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), getSelf());
+            sendMsg(new MessageClient.PrintErrorMsg("Cannot read value for key: " + m.key), recipient, getSelf());
         }
     }
 
@@ -746,14 +745,14 @@ public class Node extends AbstractActor {
 
             // Contact replicas to release the lock
             for(ActorRef replica: this.write_recipients.get(m.msg_id)) {
-                replica.tell(new MessageNode.ReleaseLockMsg(m.key, recipient), getSelf());
+                sendMsg(new MessageNode.ReleaseLockMsg(m.key, recipient), replica, getSelf());
             }
 
             this.write_requests.remove(m.msg_id);
             this.write_responses.remove(m.msg_id);
             this.update_values.remove(m.msg_id);
             this.write_recipients.remove(m.msg_id);
-            recipient.tell(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), getSelf());
+            sendMsg(new MessageClient.PrintErrorMsg("Cannot update value for key: " + m.key), recipient, getSelf());
         }
     }
 
@@ -857,7 +856,7 @@ public class Node extends AbstractActor {
                 try { Thread.sleep(this.rnd.nextInt(10)); }
                 catch (InterruptedException e) { e.printStackTrace(); }
 
-                r.tell(m, getSelf());
+                sendMsg(m, r, getSelf());
                 i++;
             }
         }
@@ -949,7 +948,7 @@ public class Node extends AbstractActor {
     }*/
 
     private void SetTimeout(MessageNode.BaseTimeout m) {
-        SetTimeout(m, T);
+        SetTimeout(m, this.T);
     }
 
     private void SetTimeout(MessageNode.BaseTimeout m, int msTimer) {
@@ -959,6 +958,18 @@ public class Node extends AbstractActor {
                 m,                                                                                                     // the message to send
                 getContext().system().dispatcher(),                                                                    // system dispatcher
                 getSelf()                                                                                              // source of the message (myself)
+        );
+    }
+
+    private void sendMsg(Object msg, ActorRef recipient, ActorRef sender) {
+        int random_delay = this.rnd.nextInt(10);
+
+        getContext().system().scheduler().scheduleOnce(
+                Duration.create(random_delay, TimeUnit.MILLISECONDS),                                                  // how frequently generate them
+                recipient,                                                                                             // destination actor reference
+                msg,                                                                                                   // the message to send
+                getContext().system().dispatcher(),                                                                    // system dispatcher
+                sender                                                                                                 // source of the message (myself)
         );
     }
 }

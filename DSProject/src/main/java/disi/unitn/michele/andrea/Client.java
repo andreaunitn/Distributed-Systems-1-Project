@@ -4,6 +4,7 @@ import scala.concurrent.duration.Duration;
 import akka.actor.AbstractActor;
 import akka.actor.Props;
 
+import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 
@@ -73,27 +74,27 @@ public class Client extends AbstractActor {
     private void OnGetRequest(MessageClient.GetRequestMsg m) {
 
         // Creating new read request for the coordinator node
-        MessageNode.GetRequestMsg req = new MessageNode.GetRequestMsg(m.key, counter);
-        this.read_requests.add(counter);
+        MessageNode.GetRequestMsg req = new MessageNode.GetRequestMsg(m.key, this.counter);
+        this.read_requests.add(this.counter);
 
         // Timeout
-        SetTimeout(new MessageClient.GetTimeoutMsg(getSelf(), m.key, "Read timeout", counter));
+        SetTimeout(new MessageClient.GetTimeoutMsg(getSelf(), m.key, "Read timeout", this.counter));
         m.node_coordinator.tell(req, getSelf());
 
-        counter += 1;
+        this.counter += 1;
     }
 
     private void OnUpdateRequest(MessageClient.UpdateRequestMsg m) {
 
         // Creating a new write request for the coordinator node
-        MessageNode.UpdateRequestMsg req = new MessageNode.UpdateRequestMsg(m.key, m.value, counter); //ex write
-        this.write_requests.add(counter);
+        MessageNode.UpdateRequestMsg req = new MessageNode.UpdateRequestMsg(m.key, m.value, this.counter); //ex write
+        this.write_requests.add(this.counter);
 
         // Timeout
-        SetTimeout(new MessageClient.UpdateTimeoutMsg(getSelf(), m.key, "Write timeout", counter));
+        SetTimeout(new MessageClient.UpdateTimeoutMsg(getSelf(), m.key, "Write timeout", this.counter));
         m.node_coordinator.tell(req, getSelf());
 
-        counter += 1;
+        this.counter += 1;
     }
 
     ////////////////////
