@@ -23,8 +23,8 @@ public class Main {
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
 
-        int N = 1, R = 1, W = 1;
-        //int N=2, R=2, W=2;
+        // int N = 1, R = 1, W = 1;
+        int N = 3, R = 2, W = 2;
         int T = 200;
 
         System.out.println("Network Initialized");
@@ -151,7 +151,7 @@ public class Main {
                         }
 
                         ActorRef node = ring.hash_table.get(k);
-                        node.tell(new Message.LeaveNetworkOrder(), ActorRef.noSender());
+                        node.tell(new MessageNode.LeaveNetworkMsg(), ActorRef.noSender());
 
                         ring.hash_table.remove(k);
                         ring.available_nodes.remove(node);
@@ -183,7 +183,7 @@ public class Main {
                         ActorRef c = clients.get(client_key);
                         c.tell(new MessageClient.GetRequestMsg(n, key), ActorRef.noSender());
 
-                        TimeUnit.MILLISECONDS.sleep(400);
+                        //TimeUnit.MILLISECONDS.sleep(400);
                         //System.out.println();
                         break;
 
@@ -217,7 +217,7 @@ public class Main {
                         ActorRef Client = clients.get(c_key);
                         Client.tell(new MessageClient.UpdateRequestMsg(Node, Key, value), ActorRef.noSender());
 
-                        TimeUnit.MILLISECONDS.sleep(500);
+                        //TimeUnit.MILLISECONDS.sleep(500);
                         //System.out.println();
                         break;
 
@@ -239,7 +239,7 @@ public class Main {
                         }
 
                         ActorRef crash_node = ring.hash_table.get(crash_key);
-                        crash_node.tell(new Message.CrashRequestOrder(), ActorRef.noSender());
+                        crash_node.tell(new MessageNode.CrashRequestMsg(), ActorRef.noSender());
 
                         ring.available_nodes.remove(crash_node);
 
@@ -275,7 +275,7 @@ public class Main {
 
                         }
 
-                        recover_node.tell(new Message.RecoveryRequestOrder(recovery_boostrap_node), ActorRef.noSender());
+                        recover_node.tell(new MessageNode.RecoveryRequestMsg(recovery_boostrap_node), ActorRef.noSender());
                         ring.available_nodes.add(recover_node);
 
                         //System.out.println("\t\t Recovery request sent\n");

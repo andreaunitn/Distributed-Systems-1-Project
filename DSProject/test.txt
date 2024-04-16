@@ -1,11 +1,7 @@
-# Creo 1 client (0)
+# Create 3 clients (0,1,2)
 1
-1
-# Creo 5 nodi (5, 10, 20, 30, 40)
-2
-1
-5
-d 200
+3
+# Create 4 nodes (10, 20, 30, 40)
 2
 1
 10
@@ -22,15 +18,101 @@ d 200
 1
 40
 d 1000
-# Stampo rete
+# Print network
 8
-# Update
+# Update (7, sette)
 5
 0
 7
 sette
+d 200
+# Get (7)
+4
+1
+7
 d 1000
-# Stampo rete
+# Print network
 8
-# Termino
+# Delete node (10)
+3
+10
+d 1000
+# Print network
+8
+# Update (8, otto)
+5
+2
+8
+otto
+d 200
+# Create node (10)
+2
+1
+10
+d 1000
+# Print network
+8
+# Update (21, ventuno)
+5
+0
+21
+ventuno
+d 1000
+# Print network
+8
+# Crash (20)
+6
+20
+d 200
+# Update (21, ventuno2)
+5
+1
+21
+ventuno2
+d 1000
+# Print network
+8
+# Update (7, sette2)
+5
+1
+7
+sette2
+# Recover node (20)
+7
+20
+d 1000
+# Print network
+8
+#########
+# Get (8)
+4
+0
+8
+# Get (8)
+4
+1
+8
+# Get (8)
+4
+2
+8
+d 1000
+# Update (8, otto2)
+5
+0
+8
+otto2
+# Update (8, otto2)
+5
+2
+8
+otto2
+# Get (8)
+4
+1
+8
+d 1000
+# Print network
+8
+# Terminate
 9

@@ -1,14 +1,14 @@
 package disi.unitn.michele.andrea;
 
-import akka.actor.Actor;
 import akka.actor.ActorRef;
 
-import java.io.Serializable;
+import javax.xml.crypto.Data;
 import java.util.Collections;
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 
-/***** Messages received by a Node coming from the Main or Client *****/
+/***** Messages received/sent by a Node *****/
 public class MessageNode {
 
     ////////////////////
@@ -21,6 +21,18 @@ public class MessageNode {
     }
 
     ////////////////////
+    // Leave
+    public static class LeaveNetworkMsg implements Serializable{}
+
+    public static class NodeLeaveMsg implements Serializable {
+        public final int key;
+
+        public NodeLeaveMsg(int key) {
+            this.key = key;
+        }
+    }
+
+    ////////////////////
     // Requests
     public static class GetRequestMsg implements Serializable {
         public final int key;
@@ -29,6 +41,27 @@ public class MessageNode {
         public GetRequestMsg(int key, int msg_id) {
             this.key = key;
             this.msg_id = msg_id;
+        }
+    }
+
+    public static class ReadRequestMsg implements Serializable {
+        public final ActorRef sender;
+        public final int key;
+        public final int msg_id;
+        public final boolean is_write;
+
+        public ReadRequestMsg(ActorRef sender, int key, int msg_id) {
+            this.sender = sender;
+            this.key = key;
+            this.msg_id = msg_id;
+            this.is_write = false;
+        }
+
+        public ReadRequestMsg(ActorRef sender, int key, int msg_id, boolean is_write) {
+            this.sender = sender;
+            this.key = key;
+            this.msg_id = msg_id;
+            this.is_write = is_write;
         }
     }
 
@@ -54,10 +87,33 @@ public class MessageNode {
         }
     }
 
+    public static class RecoveryRequestMsg implements Serializable {
+        public final ActorRef node;
+
+        public RecoveryRequestMsg(ActorRef node){
+            this.node = node;
+        }
+    }
+
     public static class NetworkRequestMsg implements Serializable {}
+    public static class CrashRequestMsg implements Serializable {}
 
     ////////////////////
     // Responses
+    public static class ReadResponseMsg implements Serializable {
+        public final ActorRef recipient;
+        public final int key;
+        public final DataEntry entry;
+        public final int msg_id;
+
+        public ReadResponseMsg(ActorRef recipient, int key, DataEntry entry, int msg_id) {
+            this.recipient = recipient;
+            this.key = key;
+            this.entry = entry;
+            this.msg_id = msg_id;
+        }
+    }
+
     public static class DataResponseMsg implements Serializable {
         public final Map<Integer, DataEntry> storage;
         public final int key;
@@ -116,25 +172,26 @@ public class MessageNode {
         }
     }
 
-    public static class PassDataTimeoutMsg extends BaseTimeout implements Serializable {
-        public PassDataTimeoutMsg(Integer key) {
-            super(key);
-        }
-    }
-
     public static class NeighborTimeoutMsg extends BaseTimeout implements Serializable {
         public final ActorRef recipient;
-        public final int message_id;
+        public final int msg_id;
 
-        public NeighborTimeoutMsg(ActorRef recipient, int key, int message_id) {
+        public NeighborTimeoutMsg(ActorRef recipient, int key, int msg_id) {
             super(key);
             this.recipient = recipient;
-            this.message_id = message_id;
+            this.msg_id = msg_id;
         }
     }
 
     ////////////////////
     // Utility
+    public static class NodeAnnounceMsg implements Serializable {
+        public final int key;
+
+        public NodeAnnounceMsg(int key) {
+            this.key = key;
+        }
+    }
 
     public static class ReleaseLockMsg implements Serializable {
         public final int key;
@@ -143,6 +200,52 @@ public class MessageNode {
         public ReleaseLockMsg(int key, ActorRef client) {
             this.key = key;
             this.client = client;
+        }
+    }
+
+    public static class PassDataItemsMsg implements Serializable {
+        public final Map<Integer, DataEntry> storage;
+
+        public PassDataItemsMsg(HashMap<Integer, DataEntry> storage) {
+            this.storage = Collections.unmodifiableMap(storage);
+        }
+    }
+
+    public static class WriteContentMsg implements Serializable {
+        public final int key;
+        public final DataEntry entry;
+
+        public WriteContentMsg(int key, DataEntry entry) {
+            this.key = key;
+            this.entry = new DataEntry(entry.GetValue(), entry.GetVersion());
+        }
+    }
+
+    public static class PrintNodeMsg implements Serializable {}
+
+    ////////////////////
+    // Errors
+    public static class ErrorMsg implements Serializable {
+        public final String msg;
+
+        public ErrorMsg(String msg) {
+            this.msg = msg;
+        }
+    }
+
+    public static class ErrorNoValueFoundMsg extends ErrorMsg implements Serializable {
+        public final ActorRef read_sender;
+        public final DataEntry entry;
+        public final int key;
+        public final int msg_id;
+
+        public ErrorNoValueFoundMsg(String msg, ActorRef read_sender, DataEntry entry, int key, int msg_id) {
+            super(msg);
+
+            this.read_sender = read_sender;
+            this.entry = new DataEntry(entry.GetValue(), entry.GetVersion());
+            this.key = key;
+            this.msg_id = msg_id;
         }
     }
 }

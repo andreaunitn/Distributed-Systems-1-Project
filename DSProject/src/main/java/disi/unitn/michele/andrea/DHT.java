@@ -21,7 +21,7 @@ public class DHT {
     // Print all nodes of the network (also the crashed ones) with the corresponding content
     public void PrintNetwork() {
 
-        this.hash_table.forEach((key, value) -> {
+        this.hash_table.forEach((key, node) -> {
 
             try {
                 TimeUnit.MILLISECONDS.sleep(100);
@@ -29,7 +29,7 @@ public class DHT {
                 throw new RuntimeException(e);
             }
 
-            value.tell(new Message.PrintNode(), ActorRef.noSender());
+            node.tell(new MessageNode.PrintNodeMsg(), ActorRef.noSender());
         });
     }
 }
