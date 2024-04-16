@@ -18,37 +18,47 @@ public class Main {
         int client_id = 0;
         final int MAX_NODES = 1024;
 
-        //Scanner in = new Scanner(System.in);
         Random rand = new Random();
 
         System.out.println("Welcome to our Distributed Systems 1 Project!");
 
+        ////////////////////////////////////////
+        // EDIT THESE PARAMETERS BEFORE RUNNING
         // int N = 1, R = 1, W = 1;
         int N = 3, R = 2, W = 2;
         int T = 200;
+        boolean inputFromFile = false;
+        ////////////////////////////////////////
+
 
         System.out.println("Network Initialized");
 
         try {
 
-            File file = new File("/Users/andreatomasoni/Desktop/Università/Magistrale/Distributed Systems 1/Project/DS1/Distributed-Systems-1-Project/DSProject/test.txt");
-            Scanner in = new Scanner(file);
+            Scanner in = null;
+            if(inputFromFile) {
+                File file = new File("/Users/andreatomasoni/Desktop/Università/Magistrale/Distributed Systems 1/Project/DS1/Distributed-Systems-1-Project/DSProject/test.txt");
+                in = new Scanner(file);
+            } else {
+                in = new Scanner(System.in);
+            }
+
 
             boolean exit = false;
             while (!exit) {
-                /*
-                System.out.println("Choose the operation you want to perform:");
-                System.out.println("\t 1: Create clients;");
-                System.out.println("\t 2: Create nodes;");
-                System.out.println("\t 3: Delete node;");
-                System.out.println("\t 4: Get;");
-                System.out.println("\t 5: Update;");
-                System.out.println("\t 6: Crash node;");
-                System.out.println("\t 7: Recover node;");
-                System.out.println("\t 8: Print network;");
-                System.out.println("\t 9: Exit;");
-                System.out.print("Operation: ");
-                */
+                if(!inputFromFile) {
+                    System.out.println("Choose the operation you want to perform:");
+                    System.out.println("\t 1: Create clients;");
+                    System.out.println("\t 2: Create nodes;");
+                    System.out.println("\t 3: Delete node;");
+                    System.out.println("\t 4: Get;");
+                    System.out.println("\t 5: Update;");
+                    System.out.println("\t 6: Crash node;");
+                    System.out.println("\t 7: Recover node;");
+                    System.out.println("\t 8: Print network;");
+                    System.out.println("\t 9: Exit;");
+                    System.out.print("Operation: ");
+                }
 
                 String op = in.nextLine();
                 //System.out.println(lineCount + ": " + op);
@@ -75,11 +85,11 @@ public class Main {
                 // All possible cases
                 switch (operation) {
                     case 1:
-                        //System.out.print("\t How many clients to create? ");
+                        if(!inputFromFile) System.out.print("\t How many clients to create? ");
                         int num_clients = Integer.parseInt(in.nextLine());
 
                         while (num_clients < 1) {
-                            //System.out.print("\t How many clients to create? ");
+                            if(!inputFromFile) System.out.print("\t How many clients to create? ");
                             num_clients = Integer.parseInt(in.nextLine());
                         }
 
@@ -92,27 +102,27 @@ public class Main {
                         break;
 
                     case 2:
-                        //System.out.print("\t How many nodes to create? ");
+                        if(!inputFromFile) System.out.print("\t How many nodes to create? ");
                         int num_nodes = Integer.parseInt(in.nextLine());
 
                         while (num_nodes < 1 || num_nodes > MAX_NODES) {
-                            //System.out.print("\t How many nodes to create? ");
+                            if(!inputFromFile) System.out.print("\t How many nodes to create? ");
                             num_nodes = Integer.parseInt(in.nextLine());
                         }
 
                         for (int i = 0; i < num_nodes; i++) {
-                            //System.out.print("\t\t Key (0-1023): ");
+                            if(!inputFromFile) System.out.print("\t\t Key (0-1023): ");
                             int k = Integer.parseInt(in.nextLine());
 
                             while (k < 0 || k > (MAX_NODES - 1)) {
-                                //System.out.println("\t\t Wrong key");
-                                //System.out.print("\t\t Key (0-1023): ");
+                                if(!inputFromFile) System.out.println("\t\t Wrong key");
+                                if(!inputFromFile) System.out.print("\t\t Key (0-1023): ");
                                 k = Integer.parseInt(in.nextLine());
                             }
 
                             while (ring.hash_table.containsKey(k)) {
-                                //System.out.println("\t\t The specified key already exists, please choose another one");
-                                //System.out.print("\t\t Key (0-1023): ");
+                                if(!inputFromFile) System.out.println("\t\t The specified key already exists, please choose another one");
+                                if(!inputFromFile) System.out.print("\t\t Key (0-1023): ");
                                 k = Integer.parseInt(in.nextLine());
                             }
 
@@ -131,22 +141,22 @@ public class Main {
                         }
 
                         // TODO: stampa nel nodo
-                        //System.out.println("\t\t Node successfully created\n");
+                        if(!inputFromFile) System.out.println("\t\t Node successfully created\n");
                         break;
 
                     case 3:
                         if (ring.hash_table.isEmpty() || ring.available_nodes.size() < 2) {
-                            //System.out.println("\t Cannot delete any node because the network is empty or there's only one node available");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t Cannot delete any node because the network is empty or there's only one node available");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
-                        //System.out.print("\t Key: ");
+                        if(!inputFromFile) System.out.print("\t Key: ");
                         int k = Integer.parseInt(in.nextLine());
 
                         while (!ring.hash_table.containsKey(k) || !ring.available_nodes.contains(ring.hash_table.get(k))) {
-                            //System.out.println("\t No node to delete with the specified key (might be in crashed state)");
-                            //System.out.print("\t Key: ");
+                            if(!inputFromFile) System.out.println("\t No node to delete with the specified key (might be in crashed state)");
+                            if(!inputFromFile) System.out.print("\t Key: ");
                             k = Integer.parseInt(in.nextLine());
                         }
 
@@ -156,26 +166,26 @@ public class Main {
                         ring.hash_table.remove(k);
                         ring.available_nodes.remove(node);
 
-                        //System.out.println("\t\t Node successfully deleted\n");
+                        if(!inputFromFile) System.out.println("\t\t Node successfully deleted\n");
                         break;
 
                     case 4:
                         if (clients.isEmpty() || ring.available_nodes.isEmpty()) {
-                            //System.out.println("\t Cannot perform get because there are no clients or the network does not contain any available node");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t Cannot perform get because there are no clients or the network does not contain any available node");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
-                        //System.out.print("\t Select client: ");
+                        if(!inputFromFile) System.out.print("\t Select client: ");
                         int client_key = Integer.parseInt(in.nextLine());
 
                         while (!clients.containsKey(client_key)) {
-                            //System.out.println("\t There is no client with the specified key");
-                            //System.out.print("\t Select client: ");
+                            if(!inputFromFile) System.out.println("\t There is no client with the specified key");
+                            if(!inputFromFile) System.out.print("\t Select client: ");
                             client_key = Integer.parseInt(in.nextLine());
                         }
 
-                        //System.out.print("\t\t Key: ");
+                        if(!inputFromFile) System.out.print("\t\t Key: ");
                         int key = Integer.parseInt(in.nextLine());
 
                         List<Integer> keys_array = new ArrayList<>(ring.hash_table.keySet());
@@ -183,33 +193,33 @@ public class Main {
                         ActorRef c = clients.get(client_key);
                         c.tell(new MessageClient.GetRequestMsg(n, key), ActorRef.noSender());
 
-                        //TimeUnit.MILLISECONDS.sleep(400);
-                        //System.out.println();
+                        if(!inputFromFile) TimeUnit.MILLISECONDS.sleep(400);
+                        if(!inputFromFile) System.out.println();
                         break;
 
                     case 5:
                         if (clients.isEmpty() || ring.available_nodes.isEmpty()) {
-                            //System.out.println("\t Cannot perform update because there are no clients or the network does not contain any available node");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t Cannot perform update because there are no clients or the network does not contain any available node");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
-                        //System.out.print("\t Select client: ");
+                        if(!inputFromFile) System.out.print("\t Select client: ");
                         int c_key = Integer.parseInt(in.nextLine());
 
                         while (!clients.containsKey(c_key)) {
-                            //System.out.println("\t There is no client with the specified key");
-                            //System.out.print("\t Select client: ");
+                            if(!inputFromFile) System.out.println("\t There is no client with the specified key");
+                            if(!inputFromFile) System.out.print("\t Select client: ");
                             c_key = Integer.parseInt(in.nextLine());
                         }
 
-                        //System.out.print("\t\t Key: ");
+                        if(!inputFromFile) System.out.print("\t\t Key: ");
                         int Key = Integer.parseInt(in.nextLine());
-                        //System.out.println();
+                        if(!inputFromFile) System.out.println();
 
                         //in.nextLine();
 
-                        //System.out.print("\t\t Value: ");
+                        if(!inputFromFile) System.out.print("\t\t Value: ");
                         String value = in.nextLine();
 
                         List<ActorRef> keys_Array = new ArrayList<>(ring.available_nodes);
@@ -217,24 +227,24 @@ public class Main {
                         ActorRef Client = clients.get(c_key);
                         Client.tell(new MessageClient.UpdateRequestMsg(Node, Key, value), ActorRef.noSender());
 
-                        //TimeUnit.MILLISECONDS.sleep(500);
-                        //System.out.println();
+                        if(!inputFromFile) TimeUnit.MILLISECONDS.sleep(500);
+                        if(!inputFromFile) System.out.println();
                         break;
 
                     case 6:
 
                         if (ring.hash_table.isEmpty() || ring.available_nodes.isEmpty()) {
-                            //System.out.println("\t Cannot make crash any node because there are no nodes available");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t Cannot make crash any node because there are no nodes available");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
-                        //System.out.print("\t Key: ");
+                        if(!inputFromFile) System.out.print("\t Key: ");
                         int crash_key = Integer.parseInt(in.nextLine());
 
                         if (!ring.hash_table.containsKey(crash_key) || !ring.available_nodes.contains(ring.hash_table.get(crash_key))) {
-                            //System.out.println("\t No node to make crash with the specified key (might be already in crashed state)");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t No node to make crash with the specified key (might be already in crashed state)");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
@@ -243,23 +253,23 @@ public class Main {
 
                         ring.available_nodes.remove(crash_node);
 
-                        //System.out.println("\t\t Crash request sent\n");
+                        if(!inputFromFile) System.out.println("\t\t Crash request sent\n");
                         break;
 
                     case 7:
 
                         if (ring.hash_table.isEmpty() || ring.available_nodes.size() == ring.hash_table.size()) {
-                            //System.out.println("\t Cannot recover any node because no node is crashed");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t Cannot recover any node because no node is crashed");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
-                        //System.out.print("\t Key: ");
+                        if(!inputFromFile) System.out.print("\t Key: ");
                         int recover_key = Integer.parseInt(in.nextLine());
 
                         if (!ring.hash_table.containsKey(recover_key) || ring.available_nodes.contains(ring.hash_table.get(recover_key))) {
-                            //System.out.println("\t No node to recover with the specified key (might be already recovered)");
-                            //System.out.println();
+                            if(!inputFromFile) System.out.println("\t No node to recover with the specified key (might be already recovered)");
+                            if(!inputFromFile) System.out.println();
                             break;
                         }
 
@@ -278,11 +288,11 @@ public class Main {
                         recover_node.tell(new MessageNode.RecoveryRequestMsg(recovery_boostrap_node), ActorRef.noSender());
                         ring.available_nodes.add(recover_node);
 
-                        //System.out.println("\t\t Recovery request sent\n");
+                        if(!inputFromFile) System.out.println("\t\t Recovery request sent\n");
                         break;
 
                     case 8:
-                        //System.out.println("Clients:");
+                        if(!inputFromFile) System.out.println("Clients:");
 
                         clients.forEach((i, client) -> {
                             client.tell(new MessageClient.PrintSelfMsg(), ActorRef.noSender());
@@ -294,8 +304,8 @@ public class Main {
                             }
                         });
 
-                        //System.out.println();
-                        //System.out.println("Nodes:");
+                        if(!inputFromFile) System.out.println();
+                        if(!inputFromFile) System.out.println("Nodes:");
                         ring.PrintNetwork();
 
                         TimeUnit.SECONDS.sleep(1);

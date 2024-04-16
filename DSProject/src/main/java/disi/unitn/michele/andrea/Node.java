@@ -256,10 +256,6 @@ public class Node extends AbstractActor {
         for(Integer k : keySet) {
 
             ArrayList<Integer> actors = FindResponsibles(k);
-            for (int actor: actors) {
-                System.out.println("Key: " + k + " Node: " + actor + " Receiver: " + this.key);
-            }
-
             if(!actors.contains(this.key)) {
                 this.storage.remove(k);
             }
@@ -299,7 +295,7 @@ public class Node extends AbstractActor {
             if (this.storage.containsKey(m.key)) {
                 sendMsg(new MessageNode.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.msg_id), getSender(), getSelf());
             } else {
-                System.out.println(getSender());
+                //System.out.println(getSender());
                 sendMsg(new MessageNode.ErrorNoValueFoundMsg("No value found for the requested key", m.sender, new DataEntry(null, -1), m.key, m.msg_id), getSender(), getSelf());
             }
         }
@@ -308,7 +304,7 @@ public class Node extends AbstractActor {
     // Node performs write operation or read goes wrong
     private void OnNoValueFound(MessageNode.ErrorNoValueFoundMsg m) {
 
-        System.out.println("NoValueFound message");
+        //System.out.println("NoValueFound message");
         Identifier identity = this.read_requests.get(m.msg_id);
 
         // I'm reading for a read request
@@ -343,17 +339,17 @@ public class Node extends AbstractActor {
         else { // I'm reading for a write request
 
             // nodes don't hold the requested value. As soon as W reply, send new value
-            System.out.println("I'm reading to write");
+            //System.out.println("I'm reading to write");
 
             if(write_responses.get(m.msg_id) != null) {
                 this.write_responses.get(m.msg_id).add(m.entry);
 
-                System.out.println("Found write response");
+                //System.out.println("Found write response");
 
                 // check if we have enough responses
                 if(this.write_responses.get(m.msg_id).size() == this.W) {
 
-                    System.out.println("We have enough replies to write");
+                    //System.out.println("We have enough replies to write");
 
                     identity = this.write_requests.get(m.msg_id);
                     ActorRef recipient = identity.client;
@@ -375,7 +371,7 @@ public class Node extends AbstractActor {
                     //System.out.println("Write recipients size: " + write_recipients.get(m.msg_id).size());
                     // Send new value to the nodes that should hold the value
                     for(ActorRef node : this.write_recipients.get(m.msg_id)) {
-                        System.out.println("Sending WriteContentMsg to " + node);
+                        //System.out.println("Sending WriteContentMsg to " + node);
                         sendMsg(new MessageNode.WriteContentMsg(m.key, value), node, getSelf());
                     }
 
@@ -907,18 +903,14 @@ public class Node extends AbstractActor {
 
     // Put data in the storage (if not outdated)
     private void InsertData(Integer key, DataEntry value) {
-        System.out.println("Node " + this.key + " is adding ...");
-        System.out.println("Key: " + key + ", k: " + value.GetValue() + "v: " + value.GetVersion());
 
         // Check if a data item with this key is already in the storage
         if(this.storage.containsKey(key)) {
             if(this.storage.get(key).GetVersion() < value.GetVersion()) {
                 this.storage.put(key, value);
-                System.out.println("Aggiunto");
             }
         } else {
             this.storage.put(key, value);
-            System.out.println("Aggiunto");
         }
     }
 
@@ -1000,7 +992,7 @@ public class Node extends AbstractActor {
     private void sendMsg(Object msg, ActorRef recipient, ActorRef sender) {
         int random_delay = this.rnd.nextInt(10);
 
-        System.out.println("Recipient: " + recipient + " , Sender: " + sender + ", message: " + msg);
+        //System.out.println("Recipient: " + recipient + " , Sender: " + sender + ", message: " + msg);
 
         getContext().system().scheduler().scheduleOnce(
                 Duration.create(random_delay, TimeUnit.MILLISECONDS),                                                  // how frequently generate them
