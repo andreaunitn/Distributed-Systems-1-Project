@@ -100,7 +100,7 @@ public class Node extends AbstractActor {
         this.T = T;
         this.locks = new HashMap<>();
 
-        System.out.println("[Node" + this.key + "] joined the system");
+        System.out.println("[Node " + this.key + "] joined the system");
     }
 
     static public Props props(Integer key, int N, int R, int W, int T) {
@@ -199,7 +199,7 @@ public class Node extends AbstractActor {
 
         // Multicast every node in the network
         Multicast(new MessageNode.NodeLeaveMsg(this.key), new HashSet<>(this.network.values()));
-        System.out.println("[Node" + this.key + "] deleted");
+        System.out.println("[Node " + this.key + "] deleted");
         sendMsg(PoisonPill.getInstance(), getSelf(), ActorRef.noSender());
     }
 
@@ -540,10 +540,10 @@ public class Node extends AbstractActor {
 
     private void OnPrintNode(MessageNode.PrintNodeMsg m) {
         if(this.is_crashed) {
-            System.err.println("[Node: " + this.key + "]");
+            System.err.println("[Node " + this.key + "]");
         }
         else {
-            System.out.println("[Node: " + this.key + "]");
+            System.out.println("[Node " + this.key + "]");
         }
 
         for(Map.Entry<Integer, DataEntry> entry: this.storage.entrySet()) {
