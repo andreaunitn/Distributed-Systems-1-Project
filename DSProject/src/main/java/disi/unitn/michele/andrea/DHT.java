@@ -13,6 +13,7 @@ public class DHT {
     public Map<Integer, ActorRef> hash_table;
     public Set<ActorRef> available_nodes;
 
+    /***** Constructor *****/
     public DHT() {
         this.hash_table = new HashMap<>();
         this.available_nodes = new HashSet<>();

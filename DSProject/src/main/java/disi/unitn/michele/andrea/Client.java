@@ -4,16 +4,18 @@ import scala.concurrent.duration.Duration;
 import akka.actor.AbstractActor;
 import akka.actor.Props;
 
-import java.util.Random;
 import java.util.concurrent.TimeUnit;
 import java.util.HashSet;
 
 public class Client extends AbstractActor {
 
+    // Client key
     private final int key;
 
-    // Contains
+    // Contains the message ids for the write requests
     private final HashSet<Integer> write_requests;
+
+    // Contains the message ids for the read requests
     private final HashSet<Integer> read_requests;
 
     // Timeout in ms
@@ -21,7 +23,6 @@ public class Client extends AbstractActor {
 
     // Counter to be used for message ids. Gets increased at every use
     private int counter = 0;
-
 
     /***** Constructor *****/
     public Client(int key, int T) {
@@ -146,10 +147,12 @@ public class Client extends AbstractActor {
     /***** Additional functions *****/
     private void log(String m) {
         System.out.println("[Client " + this.key + "] " + m);
+        System.out.println();
     }
 
     private void log_error(String m) {
         System.err.println("[Client " + this.key + "] " + m);
+        System.err.println();
     }
 
     private void SetTimeout(MessageClient.BaseTimeout m) {

@@ -2,7 +2,6 @@ package disi.unitn.michele.andrea;
 
 import akka.actor.ActorRef;
 
-import javax.xml.crypto.Data;
 import java.util.Collections;
 import java.io.Serializable;
 import java.util.HashMap;
@@ -15,6 +14,7 @@ public class MessageNode {
     // Join
     public static class JoinSystemMsg implements Serializable {
         public final ActorRef bootstrap_node;
+
         public JoinSystemMsg(ActorRef bootstrap_node) {
             this.bootstrap_node = bootstrap_node;
         }
@@ -178,6 +178,7 @@ public class MessageNode {
 
         public NeighborTimeoutMsg(ActorRef recipient, int key, int msg_id) {
             super(key);
+
             this.recipient = recipient;
             this.msg_id = msg_id;
         }

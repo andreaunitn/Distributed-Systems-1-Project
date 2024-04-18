@@ -1,9 +1,10 @@
 package disi.unitn.michele.andrea;
 
 import akka.actor.ActorRef;
+
 import java.io.Serializable;
 
-/***** Messages received by the Client coming from the Main or Nodes *****/
+/***** Messages received/sent by the client *****/
 public class MessageClient {
 
     ////////////////////

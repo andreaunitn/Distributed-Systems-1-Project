@@ -7,11 +7,13 @@ public class DataEntry implements Serializable {
     private String value;
     private int version;
 
+    /***** Constructor *****/
     public DataEntry(String value) {
         this.value = value;
         this.version = 1;
     }
 
+    /***** Methods *****/
     // To be used for the "empty" data entry, with version -1
     public DataEntry(String value, int version){
         this.value = value;
