@@ -34,7 +34,7 @@ public class Main {
         try {
             Scanner in;
             if(input_from_file) {
-                File file = new File("/Users/andreatomasoni/Desktop/Università/Magistrale/Distributed Systems 1/Project/DS1/Distributed-Systems-1-Project/DSProject/test.txt");
+                File file = new File("test.txt");
                 in = new Scanner(file);
             } else {
                 in = new Scanner(System.in);
