@@ -231,17 +231,21 @@ public class Node extends AbstractActor {
     }
 
     private void OnReadRequest(MessageNode.ReadRequestMsg m) {
-        if (this.locks.get(m.key) == null) {
-            if (m.is_write) {
-
-                // Granting a lock for the resource if we want to perform a write operation
-                this.locks.put(m.key, m.sender);
-            }
-
+        if(!m.is_write) {
             if (this.storage.containsKey(m.key)) {
                 sendMsg(new MessageNode.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.msg_id), getSender(), getSelf());
             } else {
                 sendMsg(new MessageNode.ErrorNoValueFoundMsg("No value found for the requested key", m.sender, new DataEntry(null, -1), m.key, m.msg_id), getSender(), getSelf());
+            }
+        } else {
+            if (this.locks.get(m.key) == null) {
+                this.locks.put(m.key, m.sender);
+
+                if (this.storage.containsKey(m.key)) {
+                    sendMsg(new MessageNode.ReadResponseMsg(m.sender, m.key, this.storage.get(m.key), m.msg_id), getSender(), getSelf());
+                } else {
+                    sendMsg(new MessageNode.ErrorNoValueFoundMsg("No value found for the requested key", m.sender, new DataEntry(null, -1), m.key, m.msg_id), getSender(), getSelf());
+                }
             }
         }
     }
