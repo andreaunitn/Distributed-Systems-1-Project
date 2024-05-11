@@ -6,11 +6,10 @@
   <component name="ChangeListManager">
     <list default="true" id="9523280f-6d05-484f-8f4c-7ecdd90564b8" name="Changes" comment="">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/MessageNode.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/MessageNode.java" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
     </list>
-    <list id="041f26f9-64ee-47e6-b80d-5ab99bd9a699" name="Changes by andreatomasoni" comment="">
-      <change beforePath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" beforeDir="false" afterPath="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java" afterDir="false" />
-    </list>
+    <list id="041f26f9-64ee-47e6-b80d-5ab99bd9a699" name="Changes by andreatomasoni" comment="" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
@@ -26,7 +25,12 @@
       <state>
         <projects_view>
           <tree_state>
-            <expand />
+            <expand>
+              <path>
+                <item name="" type="6a2764b6:ExternalProjectsStructure$RootNode" />
+                <item name="DSProject" type="f1a62948:ProjectNode" />
+              </path>
+            </expand>
             <select />
           </tree_state>
         </projects_view>
@@ -36,40 +40,11 @@
   <component name="Git.Settings">
     <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$" />
   </component>
-  <component name="LineStatusTrackerManager">
-    <file path="$PROJECT_DIR$/DSProject/src/main/java/disi/unitn/michele/andrea/Node.java">
-      <ranges>
-        <range start1="2" end1="3" start2="2" end2="4" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="4" end1="7" start2="5" end2="5" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="124" end1="124" start2="122" end2="123" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="128" end1="128" start2="127" end2="128" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="179" end1="180" start2="179" end2="182" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="213" end1="214" start2="215" end2="223" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="342" end1="366" start2="351" end2="352" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="367" end1="368" start2="353" end2="354" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="369" end1="370" start2="355" end2="356" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="371" end1="373" start2="357" end2="359" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="374" end1="377" start2="360" end2="363" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="378" end1="384" start2="364" end2="370" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="385" end1="386" start2="371" end2="372" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="387" end1="390" start2="373" end2="376" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="391" end1="392" start2="377" end2="378" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="393" end1="395" start2="379" end2="381" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="396" end1="398" start2="382" end2="384" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="399" end1="401" start2="385" end2="387" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="402" end1="405" start2="388" end2="388" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="406" end1="406" start2="389" end2="390" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="407" end1="409" start2="391" end2="391" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="410" end1="412" start2="392" end2="393" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="452" end1="452" start2="433" end2="454" changelist="9523280f-6d05-484f-8f4c-7ecdd90564b8" />
-        <range start1="712" end1="714" start2="714" end2="716" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="715" end1="716" start2="717" end2="718" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-        <range start1="719" end1="720" start2="721" end2="722" changelist="041f26f9-64ee-47e6-b80d-5ab99bd9a699" />
-      </ranges>
-    </file>
-  </component>
   <component name="MarkdownSettingsMigration">
     <option name="stateVersion" value="1" />
+  </component>
+  <component name="ProjectCodeStyleSettingsMigration">
+    <option name="version" value="2" />
   </component>
   <component name="ProjectColorInfo">{
   &quot;associatedIndex&quot;: 3
@@ -81,26 +56,47 @@
   </component>
   <component name="PropertiesComponent"><![CDATA[{
   "keyToString": {
-    "Application.Main.executor": "Run",
+    "Application.Main.executor": "Coverage",
     "Gradle.Build DSProject.executor": "Run",
     "Gradle.DSProject [:Main.main()].executor": "Run",
     "RunOnceActivity.OpenProjectViewOnStart": "true",
     "RunOnceActivity.ShowReadmeOnStart": "true",
+    "SHARE_PROJECT_CONFIGURATION_FILES": "true",
     "git-widget-placeholder": "review",
     "kotlin-language-version-configured": "true",
     "last_opened_file_path": "/Users/michelelamon/Documents/UNITN/Distributed Systems 1/Distributed-Systems-1-Project",
+    "node.js.detected.package.eslint": "true",
+    "node.js.detected.package.tslint": "true",
+    "node.js.selected.package.eslint": "(autodetect)",
+    "node.js.selected.package.tslint": "(autodetect)",
+    "nodejs_package_manager_path": "npm",
     "project.structure.last.edited": "Modules",
     "project.structure.proportion": "0.15",
     "project.structure.side.proportion": "0.2",
-    "settings.editor.selected.configurable": "configurable.group.appearance"
+    "settings.editor.selected.configurable": "preferences.pluginManager",
+    "vue.rearranger.settings.migration": "true"
   }
 }]]></component>
+  <component name="RunManager">
+    <configuration default="true" type="JetRunConfigurationType">
+      <module name="DSProject" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+    <configuration default="true" type="KotlinStandaloneScriptRunConfigurationType">
+      <module name="DSProject" />
+      <option name="filePath" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
   <component name="SharedIndexes">
     <attachedChunks>
       <set>
-        <option value="jdk-18.0.2-corretto-18.0.2-4caba194b151-68fdadd5" />
-        <option value="jdk-19.0.2-corretto-19.0.2-4caba194b151-be841094" />
-        <option value="jdk-21.0.2-openjdk-21.0.2-4caba194b151-322ed176" />
+        <option value="bundled-jdk-9f38398b9061-18abd8497189-intellij.indexing.shared.core-IU-241.14494.240" />
+        <option value="bundled-js-predefined-1d06a55b98c1-74d2a5396914-JavaScript-IU-241.14494.240" />
       </set>
     </attachedChunks>
   </component>
@@ -112,7 +108,25 @@
       <option name="number" value="Default" />
       <option name="presentableId" value="Default" />
       <updated>1705742109731</updated>
+      <workItem from="1712608390882" duration="101000" />
+      <workItem from="1712673717514" duration="107000" />
+      <workItem from="1712761832016" duration="19000" />
+      <workItem from="1712767718681" duration="88000" />
+      <workItem from="1712767818587" duration="19000" />
+      <workItem from="1713015579658" duration="15000" />
+      <workItem from="1713017156522" duration="3765000" />
+      <workItem from="1713274958669" duration="173000" />
+      <workItem from="1713983901541" duration="623000" />
+      <workItem from="1715282696710" duration="7256000" />
     </task>
     <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="com.intellij.coverage.CoverageDataManagerImpl">
+    <SUITE FILE_PATH="coverage/Distributed_Systems_1_Project$Main.ic" NAME="Main Coverage Results" MODIFIED="1715432322863" SOURCE_PROVIDER="com.intellij.coverage.DefaultCoverageFileProvider" RUNNER="idea" COVERAGE_BY_TEST_ENABLED="false" COVERAGE_TRACING_ENABLED="true">
+      <FILTER>disi.unitn.michele.andrea.*</FILTER>
+    </SUITE>
   </component>
 </project>
