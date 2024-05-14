@@ -386,7 +386,7 @@ public class Node extends AbstractActor {
         this.storage.putAll(m.storage);
 
         for(Integer k: m.storage.keySet()) {
-            sendMsg(new MessageNode.GetRequestMsg(k, this.counter), getSender(), getSelf());
+            sendMsg(new MessageNode.GetRequestMsg(k, this.counter), getSelf(), getSelf());
             this.counter += 1;
         }
 

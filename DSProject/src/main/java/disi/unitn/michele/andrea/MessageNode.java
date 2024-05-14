@@ -109,7 +109,7 @@ public class MessageNode {
         public ReadResponseMsg(ActorRef recipient, int key, DataEntry entry, int msg_id) {
             this.recipient = recipient;
             this.key = key;
-            this.entry = entry;
+            this.entry = new DataEntry(entry.GetValue(), entry.GetVersion());
             this.msg_id = msg_id;
         }
     }
